@@ -1,0 +1,4 @@
+build/
+solutions/
+*.o
+*.dSYM/

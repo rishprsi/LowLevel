@@ -1,0 +1,7 @@
+[package]
+name = "proper_rust"
+version = "0.1.0"
+edition = "2021"
+
+# Zero dependencies on purpose: everything is std, so the crate builds offline.
+[dependencies]
