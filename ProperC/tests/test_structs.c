@@ -6,6 +6,7 @@
 int main(void) {
     /* is_little_endian must agree with ground truth on this machine */
     {
+        SECTION("is_little_endian");
         uint32_t v = 0x01020304u;
         uint8_t bytes[4];
         memcpy(bytes, &v, 4);
@@ -15,6 +16,7 @@ int main(void) {
 
     /* little-endian (de)serialization */
     {
+        SECTION("u32_bytes_le");
         uint8_t out[4];
         u32_to_bytes_le(0x01020304u, out);
         CHECK_UINT_EQ(out[0], 0x04);
@@ -26,6 +28,7 @@ int main(void) {
 
     /* big-endian (de)serialization */
     {
+        SECTION("u32_bytes_be");
         uint8_t out[4];
         u32_to_bytes_be(0x01020304u, out);
         CHECK_UINT_EQ(out[0], 0x01);
@@ -37,6 +40,7 @@ int main(void) {
 
     /* round trips for several values */
     {
+        SECTION("u32_bytes round trips");
         uint32_t vals[] = {0u, 1u, 0xFFFFFFFFu, 0xDEADBEEFu, 0x12345678u};
         for (size_t i = 0; i < sizeof(vals) / sizeof(vals[0]); i++) {
             uint8_t le[4], be[4];
@@ -49,6 +53,7 @@ int main(void) {
 
     /* rgba pack/unpack */
     {
+        SECTION("pack/unpack_rgba");
         CHECK_UINT_EQ(pack_rgba(0x11, 0x22, 0x33, 0x44), 0x11223344u);
         uint8_t r, g, b, a;
         unpack_rgba(0xAABBCCDDu, &r, &g, &b, &a);

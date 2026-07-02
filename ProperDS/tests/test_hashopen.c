@@ -60,10 +60,12 @@ int main(void) {
     char key[32];
 
     /* ---- contract hash ---- */
+    SECTION("hashopen_fnv1a");
     CHECK_UINT_EQ(hashopen_fnv1a(""), 0xcbf29ce484222325ULL);
     CHECK_UINT_EQ(hashopen_fnv1a("foobar"), 0x85944171f73967e8ULL);
 
     /* ---- basic put/get/delete/upsert ---- */
+    SECTION("hashopen put/get/delete/upsert");
     CHECK_TRUE(hashopen_init(&h));
     CHECK_UINT_EQ(h.nslots, 16);
     CHECK_FALSE(hashopen_get(&h, "missing", &out));
@@ -78,6 +80,7 @@ int main(void) {
     CHECK_TRUE(hashopen_validate(&h));
 
     /* table owns its keys */
+    SECTION("hashopen owns key copies");
     strcpy(key, "caller");
     CHECK_TRUE(hashopen_put(&h, key, 42));
     strcpy(key, "XXXXXX");
@@ -93,6 +96,7 @@ int main(void) {
      * the shared home slot. get(k2)/get(k3) MUST probe past the tombstone.
      * A naive "stop at first non-occupied slot" lookup fails here.
      */
+    SECTION("hashopen tombstone probing");
     char colls[3][16];
     {
         int found = 0;
@@ -119,6 +123,7 @@ int main(void) {
     CHECK_FALSE(hashopen_get(&h, colls[0], &out)); /* really gone */
     CHECK_TRUE(hashopen_validate(&h));
     /* re-insert: may recycle the tombstone; must not duplicate */
+    SECTION("hashopen recycle tombstone");
     CHECK_TRUE(hashopen_put(&h, colls[0], 101));
     CHECK_UINT_EQ(hashopen_len(&h), 3);
     CHECK_TRUE(hashopen_get(&h, colls[0], &out));
@@ -128,6 +133,7 @@ int main(void) {
 
     /* ---- resize: 30 keys > 0.7 * 16, so the table must grow;
      *      rehash must also clean tombstones ---- */
+    SECTION("hashopen resize / rehash");
     CHECK_TRUE(hashopen_init(&h));
     for (int i = 0; i < 30; i++) {
         snprintf(key, sizeof(key), "grow%d", i);
@@ -143,6 +149,7 @@ int main(void) {
         CHECK_INT_EQ(out, i);
     }
     /* delete half -> tombstones; then force churn and confirm no key lost */
+    SECTION("hashopen delete half + churn");
     for (int i = 0; i < 30; i += 2) {
         snprintf(key, sizeof(key), "grow%d", i);
         CHECK_TRUE(hashopen_delete(&h, key));
@@ -157,6 +164,7 @@ int main(void) {
     hashopen_free(&h);
 
     /* ---- randomized differential test: ~2000 ops vs the flat oracle ---- */
+    SECTION("differential vs oracle");
     srand(555002);
     CHECK_TRUE(hashopen_init(&h));
     for (int op = 0; op < 2000; op++) {
@@ -164,28 +172,34 @@ int main(void) {
         snprintf(key, sizeof(key), "k%d", rand() % KEYSPACE);
         if (r == 0) { /* put */
             int v = rand();
-            CHECK_TRUE(hashopen_put(&h, key, v));
+            CHECK_TRUE_MSG(hashopen_put(&h, key, v), "op=%d key=%s v=%d", op,
+                           key, v);
             ora_put(key, v);
         } else if (r == 1) { /* get */
             OraPair *p = ora_find(key);
             bool got = hashopen_get(&h, key, &out);
-            CHECK_INT_EQ(got, p != NULL);
+            CHECK_INT_EQ_MSG(got, p != NULL, "op=%d key=%s", op, key);
             if (p && got) {
-                CHECK_INT_EQ(out, p->value);
+                CHECK_INT_EQ_MSG(out, p->value, "op=%d key=%s", op, key);
             }
         } else { /* delete (this churns tombstones constantly) */
             bool want = ora_delete(key);
-            CHECK_INT_EQ(hashopen_delete(&h, key), want);
+            CHECK_INT_EQ_MSG(hashopen_delete(&h, key), want, "op=%d key=%s", op,
+                             key);
         }
-        CHECK_UINT_EQ(hashopen_len(&h), olen);
+        CHECK_UINT_EQ_MSG(hashopen_len(&h), olen, "op=%d r=%d key=%s", op, r,
+                          key);
         if (op % 100 == 0) {
-            CHECK_TRUE(hashopen_validate(&h));
+            CHECK_TRUE_MSG(hashopen_validate(&h), "op=%d", op);
         }
     }
+    SECTION("differential final sweep");
     CHECK_TRUE(hashopen_validate(&h));
     for (size_t i = 0; i < olen; i++) {
-        CHECK_TRUE(hashopen_get(&h, opairs[i].key, &out));
-        CHECK_INT_EQ(out, opairs[i].value);
+        CHECK_TRUE_MSG(hashopen_get(&h, opairs[i].key, &out), "i=%zu key=%s", i,
+                       opairs[i].key);
+        CHECK_INT_EQ_MSG(out, opairs[i].value, "i=%zu key=%s", i,
+                         opairs[i].key);
     }
     hashopen_free(&h);
     hashopen_free(&h); /* double free is safe per contract */

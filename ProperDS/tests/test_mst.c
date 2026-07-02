@@ -25,38 +25,46 @@ int main(void) {
         {0, 1, 4}, {0, 2, 8}, {1, 2, 8}, {1, 3, 11}, {2, 3, 7},
         {2, 4, 1}, {3, 4, 2}, {3, 5, 6}, {4, 5, 9},
     };
+    SECTION("kruskal / prim classic graph");
     CHECK_INT_EQ(kruskal(6, g1, 9), 21);
     CHECK_INT_EQ(prim(6, g1, 9), 21);
 
     /* triangle: MST takes the two cheap sides */
+    SECTION("kruskal / prim triangle");
     MstEdge tri[] = {{0, 1, 1}, {1, 2, 2}, {0, 2, 10}};
     CHECK_INT_EQ(kruskal(3, tri, 3), 3);
     CHECK_INT_EQ(prim(3, tri, 3), 3);
 
     /* parallel edges: the cheaper duplicate must win */
+    SECTION("kruskal / prim parallel edges");
     MstEdge par[] = {{0, 1, 9}, {0, 1, 2}};
     CHECK_INT_EQ(kruskal(2, par, 2), 2);
     CHECK_INT_EQ(prim(2, par, 2), 2);
 
     /* self-loops must never be picked */
+    SECTION("kruskal / prim self-loops");
     MstEdge loops[] = {{0, 0, -100}, {0, 1, 5}, {1, 1, -100}};
     CHECK_INT_EQ(kruskal(2, loops, 3), 5);
     CHECK_INT_EQ(prim(2, loops, 3), 5);
 
     /* single vertex: empty MST */
+    SECTION("kruskal / prim single vertex");
     CHECK_INT_EQ(kruskal(1, NULL, 0), 0);
     CHECK_INT_EQ(prim(1, NULL, 0), 0);
 
     /* disconnected graph: no spanning tree */
+    SECTION("kruskal / prim disconnected");
     MstEdge disc[] = {{0, 1, 1}, {2, 3, 1}};
     CHECK_INT_EQ(kruskal(4, disc, 2), -1);
     CHECK_INT_EQ(prim(4, disc, 2), -1);
 
     /* two vertices, no edges: also disconnected */
+    SECTION("kruskal / prim no edges");
     CHECK_INT_EQ(kruskal(2, NULL, 0), -1);
     CHECK_INT_EQ(prim(2, NULL, 0), -1);
 
     /* kruskal must not clobber the caller's edge array */
+    SECTION("kruskal preserves input array");
     MstEdge keep[] = {{0, 1, 3}, {1, 2, 1}, {0, 2, 2}};
     CHECK_INT_EQ(kruskal(3, keep, 3), 3);
     CHECK_INT_EQ(keep[0].w, 3);
@@ -64,6 +72,7 @@ int main(void) {
     CHECK_INT_EQ(keep[2].w, 2);
 
     /* ---- randomized cross-check on guaranteed-connected graphs ---- */
+    SECTION("differential kruskal vs prim");
     srand(505010);
     static MstEdge edges[600];
     for (int trial = 0; trial < 60; trial++) {
@@ -86,14 +95,16 @@ int main(void) {
         }
         long long k = kruskal(n, edges, m);
         long long p = prim(n, edges, m);
-        CHECK_TRUE(k >= 0); /* connected by construction */
-        CHECK_INT_EQ(k, p); /* the two algorithms must agree */
+        CHECK_TRUE_MSG(k >= 0, "trial=%d n=%d m=%zu", trial, n,
+                       m); /* connected by construction */
+        CHECK_INT_EQ_MSG(k, p, "trial=%d n=%d m=%zu", trial, n,
+                         m); /* the two algorithms must agree */
         /* MST weight can never exceed the spanning tree we built */
         long long st = 0;
         for (int i = 0; i < n - 1; i++) {
             st += edges[i].w;
         }
-        CHECK_TRUE(k <= st);
+        CHECK_TRUE_MSG(k <= st, "trial=%d n=%d st=%lld", trial, n, st);
     }
 
     CTEST_END();

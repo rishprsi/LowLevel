@@ -7,6 +7,7 @@ int main(void) {
     HttpRequest req;
 
     /* --- a well-formed GET --- */
+    SECTION("http_parse_request GET");
     const char *get =
         "GET /index.html HTTP/1.1\r\n"
         "Host: example.com\r\n"
@@ -24,6 +25,7 @@ int main(void) {
     CHECK_STR_EQ(req.headers[2].value, "");
 
     /* case-insensitive lookup */
+    SECTION("http_get_header");
     CHECK_STR_EQ(http_get_header(&req, "Host"), "example.com");
     CHECK_STR_EQ(http_get_header(&req, "host"), "example.com");
     CHECK_STR_EQ(http_get_header(&req, "HOST"), "example.com");
@@ -31,6 +33,7 @@ int main(void) {
     CHECK_PTR_NULL(http_get_header(&req, "Content-Length"));
 
     /* --- POST with a body: body is ignored, head parses --- */
+    SECTION("http_parse_request POST body");
     const char *post =
         "POST /submit HTTP/1.1\r\n"
         "Host: example.com\r\n"
@@ -44,12 +47,14 @@ int main(void) {
     CHECK_STR_EQ(http_get_header(&req, "content-length"), "5");
 
     /* --- request with no headers at all --- */
+    SECTION("http_parse_request no headers");
     const char *bare = "GET / HTTP/1.1\r\n\r\n";
     CHECK_TRUE(http_parse_request(bare, strlen(bare), &req));
     CHECK_STR_EQ(req.method, "GET");
     CHECK_INT_EQ(req.nheaders, 0);
 
     /* --- malformed: missing CRLFCRLF terminator --- */
+    SECTION("http_parse_request unterminated");
     const char *unterminated = "GET / HTTP/1.1\r\nHost: x\r\n";
     CHECK_FALSE(http_parse_request(unterminated, strlen(unterminated), &req));
 
@@ -58,6 +63,7 @@ int main(void) {
     CHECK_FALSE(http_parse_request(bare_lf, strlen(bare_lf), &req));
 
     /* --- malformed request lines --- */
+    SECTION("http_parse_request bad request line");
     const char *two_tokens = "GET /\r\n\r\n";
     CHECK_FALSE(http_parse_request(two_tokens, strlen(two_tokens), &req));
     const char *four_tokens = "GET / HTTP/1.1 extra\r\n\r\n";
@@ -68,12 +74,14 @@ int main(void) {
     CHECK_FALSE(http_parse_request(empty_line, strlen(empty_line), &req));
 
     /* --- malformed headers --- */
+    SECTION("http_parse_request bad headers");
     const char *no_colon = "GET / HTTP/1.1\r\nBadHeader\r\n\r\n";
     CHECK_FALSE(http_parse_request(no_colon, strlen(no_colon), &req));
     const char *empty_name = "GET / HTTP/1.1\r\n: value\r\n\r\n";
     CHECK_FALSE(http_parse_request(empty_name, strlen(empty_name), &req));
 
     /* --- embedded NUL inside the header section --- */
+    SECTION("http_parse_request embedded NUL");
     char nul_buf[] = "GET / HTTP/1.1\r\nHost: exam_le.com\r\n\r\n";
     size_t nul_len = sizeof nul_buf - 1;
     nul_buf[26] = '\0'; /* clobber a byte of the host value */
@@ -87,6 +95,7 @@ int main(void) {
         "Accept: */*\r\n"
         "\r\n";
     size_t full_len = strlen(full);
+    SECTION("http_parse_request truncations");
     for (size_t i = 0; i < full_len; i++) {
         CHECK_FALSE(http_parse_request(full, i, &req));
     }
@@ -95,6 +104,7 @@ int main(void) {
     /* --- torture: flip each byte of the request line to '\r' and make sure
      *     we never crash or read out of bounds (result may be true or false,
      *     the sanitizers are the real judge here) --- */
+    SECTION("http_parse_request fuzz request line");
     char fuzz[128];
     for (size_t i = 0; i < 17; i++) { /* request line + its CRLF */
         memcpy(fuzz, full, full_len);
@@ -104,6 +114,7 @@ int main(void) {
     CHECK_TRUE(1); /* survived the fuzz loop */
 
     /* --- too many headers --- */
+    SECTION("http_parse_request too many headers");
     char many[4096];
     int off = snprintf(many, sizeof many, "GET / HTTP/1.1\r\n");
     for (int i = 0; i < HTTP_MAX_HEADERS + 1; i++) {
@@ -114,6 +125,7 @@ int main(void) {
     CHECK_FALSE(http_parse_request(many, (size_t)off, &req));
 
     /* exactly HTTP_MAX_HEADERS is fine */
+    SECTION("http_parse_request max headers");
     off = snprintf(many, sizeof many, "GET / HTTP/1.1\r\n");
     for (int i = 0; i < HTTP_MAX_HEADERS; i++) {
         off += snprintf(many + off, sizeof many - (size_t)off,

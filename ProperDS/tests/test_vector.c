@@ -27,6 +27,7 @@ int main(void) {
     Vector v;
 
     /* ---- unit tests: init / empty state ---- */
+    SECTION("vector_init / empty state");
     vector_init(&v);
     CHECK_UINT_EQ(vector_len(&v), 0);
     CHECK_UINT_EQ(vector_cap(&v), 0);
@@ -35,6 +36,7 @@ int main(void) {
     vector_free(&v); /* free of empty vector must be safe */
 
     /* ---- unit tests: growth policy 0 -> 4 -> 8 ---- */
+    SECTION("vector_push growth policy");
     vector_init(&v);
     CHECK_TRUE(vector_push(&v, 10));
     CHECK_UINT_EQ(vector_cap(&v), 4);
@@ -48,6 +50,7 @@ int main(void) {
     CHECK_TRUE(vector_validate(&v));
 
     /* ---- unit tests: get / set / pop ---- */
+    SECTION("vector_get / set / pop");
     CHECK_INT_EQ(vector_get(&v, 0), 10);
     CHECK_INT_EQ(vector_get(&v, 4), 14);
     vector_set(&v, 2, 99);
@@ -56,6 +59,7 @@ int main(void) {
     CHECK_UINT_EQ(vector_len(&v), 4);
 
     /* ---- unit tests: insert_at / remove_at ---- */
+    SECTION("vector_insert_at / remove_at");
     CHECK_TRUE(vector_insert_at(&v, 0, -1)); /* front */
     CHECK_INT_EQ(vector_get(&v, 0), -1);
     CHECK_INT_EQ(vector_get(&v, 1), 10);
@@ -76,6 +80,7 @@ int main(void) {
     CHECK_PTR_NULL(v.data);
 
     /* ---- randomized differential test vs the shadow array ---- */
+    SECTION("differential vs oracle");
     srand(20260701);
     vector_init(&v);
     for (int op = 0; op < 3000; op++) {
@@ -83,12 +88,12 @@ int main(void) {
         if (r == 0 || (shadow_len == 0 && r != 5)) { /* push */
             if (shadow_len < SHADOW_CAP) {
                 int x = rand();
-                CHECK_TRUE(vector_push(&v, x));
+                CHECK_TRUE_MSG(vector_push(&v, x), "op=%d r=%d", op, r);
                 shadow[shadow_len++] = x;
             }
         } else if (r == 1) { /* pop */
             int got = vector_pop(&v);
-            CHECK_INT_EQ(got, shadow[shadow_len - 1]);
+            CHECK_INT_EQ_MSG(got, shadow[shadow_len - 1], "op=%d r=%d", op, r);
             shadow_len--;
         } else if (r == 2) { /* set */
             size_t i = (size_t)rand() % shadow_len;
@@ -97,7 +102,8 @@ int main(void) {
             shadow[i] = x;
         } else if (r == 3) { /* get */
             size_t i = (size_t)rand() % shadow_len;
-            CHECK_INT_EQ(vector_get(&v, i), shadow[i]);
+            CHECK_INT_EQ_MSG(vector_get(&v, i), shadow[i], "op=%d r=%d i=%zu",
+                             op, r, i);
         } else if (r == 4) { /* remove_at */
             size_t i = (size_t)rand() % shadow_len;
             vector_remove_at(&v, i);
@@ -106,16 +112,18 @@ int main(void) {
             if (shadow_len < SHADOW_CAP) {
                 size_t i = (size_t)rand() % (shadow_len + 1);
                 int x = rand();
-                CHECK_TRUE(vector_insert_at(&v, i, x));
+                CHECK_TRUE_MSG(vector_insert_at(&v, i, x), "op=%d r=%d i=%zu",
+                               op, r, i);
                 shadow_insert_at(i, x);
             }
         }
-        CHECK_TRUE(vector_validate(&v));
-        CHECK_UINT_EQ(vector_len(&v), shadow_len);
+        CHECK_TRUE_MSG(vector_validate(&v), "op=%d r=%d", op, r);
+        CHECK_UINT_EQ_MSG(vector_len(&v), shadow_len, "op=%d r=%d", op, r);
     }
     /* final full comparison */
+    SECTION("differential final compare");
     for (size_t i = 0; i < shadow_len; i++) {
-        CHECK_INT_EQ(vector_get(&v, i), shadow[i]);
+        CHECK_INT_EQ_MSG(vector_get(&v, i), shadow[i], "i=%zu", i);
     }
     vector_free(&v);
 

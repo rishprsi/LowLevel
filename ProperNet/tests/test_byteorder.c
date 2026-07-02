@@ -14,12 +14,14 @@ int main(void) {
     };
 
     /* agree with the real thing on many values, and round-trip */
+    SECTION("my_htons / my_ntohs");
     for (size_t i = 0; i < sizeof vals16 / sizeof vals16[0]; i++) {
         uint16_t v = vals16[i];
         CHECK_UINT_EQ(my_htons(v), htons(v));
         CHECK_UINT_EQ(my_ntohs(v), ntohs(v));
         CHECK_UINT_EQ(my_ntohs(my_htons(v)), v);
     }
+    SECTION("my_htonl / my_ntohl");
     for (size_t i = 0; i < sizeof vals32 / sizeof vals32[0]; i++) {
         uint32_t v = vals32[i];
         CHECK_UINT_EQ(my_htonl(v), htonl(v));
@@ -28,12 +30,14 @@ int main(void) {
     }
 
     /* byte-level ground truth: network order is big-endian in memory */
+    SECTION("my_htons byte layout");
     uint16_t n16 = my_htons(0x1234u);
     uint8_t b2[2];
     memcpy(b2, &n16, sizeof b2);
     CHECK_UINT_EQ(b2[0], 0x12u);
     CHECK_UINT_EQ(b2[1], 0x34u);
 
+    SECTION("my_htonl byte layout");
     uint32_t n32 = my_htonl(0x12345678u);
     uint8_t b4[4];
     memcpy(b4, &n32, sizeof b4);

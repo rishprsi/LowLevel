@@ -10,6 +10,8 @@ threads, atomics, mmap, and filesystem metadata. Everything builds with
 Everything builds AND passes on macOS; the one Linux-only module (`procfs`)
 compiles everywhere and runtime-skips itself on macOS.
 
+Per-function documentation and background: see [MODULES.md](MODULES.md).
+
 ## Workflow (red → green)
 
 1. Pick a module (start with `fileio`).
@@ -39,9 +41,22 @@ compiles everywhere and runtime-skips itself on macOS.
 | `make sol_<module>` | Run one module against its reference solution |
 | `make clean` | Remove `build/` |
 
-A failing check prints `FAIL <file>:<line>: ... (got X, want Y)` and the binary
-exits nonzero. AddressSanitizer / UBSan will additionally abort with a detailed
-report on any out-of-bounds access, leak, or undefined operation.
+When a check fails it prints a labeled block — the section (function/topic under
+test) with a per-section check number, the input expression, and the expected vs
+actual value — then the binary exits nonzero:
+
+```
+FAIL tests/test_fileio.c:41 [read_all #2]
+  input:    (long)n
+  expected: 11
+  actual:   5
+```
+
+The `*_MSG` macro variants (e.g. `CHECK_INT_EQ_MSG(got, want, "fd=%d", fd)`)
+add a `context:` line — useful when the failing input isn't visible in the
+expression. `CTEST_END()` also lists every section that had a failure.
+AddressSanitizer / UBSan will additionally abort with a detailed report on any
+out-of-bounds access, leak, or undefined operation.
 
 ## Modules
 

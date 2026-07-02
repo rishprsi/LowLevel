@@ -83,6 +83,7 @@ static int brute_knapsack(const int *w, const int *v, size_t n, int cap) {
 
 int main(void) {
     /* ================= prefix_function ================= */
+    SECTION("prefix_function");
     int pi[64];
     prefix_function("abcabcd", pi);
     int want1[] = {0, 0, 0, 1, 2, 3, 0};
@@ -104,6 +105,7 @@ int main(void) {
     prefix_function("", pi); /* must not touch pi at all — just not crash */
 
     /* ================= kmp_search ================= */
+    SECTION("kmp_search");
     CHECK_INT_EQ(kmp_search("hello world", "world"), 6);
     CHECK_INT_EQ(kmp_search("hello world", "hello"), 0);
     CHECK_INT_EQ(kmp_search("hello world", "xyz"), -1);
@@ -118,6 +120,7 @@ int main(void) {
     CHECK_INT_EQ(kmp_search("same", "same"), 0); /* needle == haystack */
 
     /* fuzz vs naive scan, tiny alphabet to force real matches */
+    SECTION("kmp_search differential vs naive");
     srand(808013);
     for (int trial = 0; trial < 300; trial++) {
         char hay[33], nee[6];
@@ -131,10 +134,12 @@ int main(void) {
             nee[i] = (char)('a' + rand() % 2);
         }
         nee[nn] = '\0';
-        CHECK_INT_EQ(kmp_search(hay, nee), brute_find(hay, nee));
+        CHECK_INT_EQ_MSG(kmp_search(hay, nee), brute_find(hay, nee),
+                         "trial=%d hay=\"%s\" nee=\"%s\"", trial, hay, nee);
     }
 
     /* ================= edit_distance ================= */
+    SECTION("edit_distance");
     CHECK_INT_EQ(edit_distance("kitten", "sitting"), 3);
     CHECK_INT_EQ(edit_distance("flaw", "lawn"), 2);
     CHECK_INT_EQ(edit_distance("", ""), 0);
@@ -145,6 +150,7 @@ int main(void) {
     CHECK_INT_EQ(edit_distance("intention", "execution"), 5);
 
     /* brute-force cross-check for all short strings over {a,b,c} */
+    SECTION("edit_distance differential vs brute");
     for (int trial = 0; trial < 200; trial++) {
         char sa[8], sb[8];
         int la = rand() % 7, lb = rand() % 7;
@@ -156,10 +162,12 @@ int main(void) {
             sb[i] = (char)('a' + rand() % 3);
         }
         sb[lb] = '\0';
-        CHECK_INT_EQ(edit_distance(sa, sb), brute_edit(sa, sb));
+        CHECK_INT_EQ_MSG(edit_distance(sa, sb), brute_edit(sa, sb),
+                         "trial=%d sa=\"%s\" sb=\"%s\"", trial, sa, sb);
     }
 
     /* ================= lis_length ================= */
+    SECTION("lis_length");
     int lis1[] = {10, 9, 2, 5, 3, 7, 101, 18};
     CHECK_INT_EQ(lis_length(lis1, 8), 4); /* 2 3 7 18 (or 101) */
     int lis2[] = {5, 4, 3, 2, 1};
@@ -173,16 +181,19 @@ int main(void) {
     CHECK_INT_EQ(lis_length(lis5, 1), 1);
 
     /* brute-force cross-check at n <= 12 */
+    SECTION("lis_length differential vs brute");
     for (int trial = 0; trial < 150; trial++) {
         int arr[12];
         size_t n = (size_t)(rand() % 13);
         for (size_t i = 0; i < n; i++) {
             arr[i] = rand() % 10; /* duplicates likely */
         }
-        CHECK_INT_EQ(lis_length(arr, n), brute_lis(arr, n));
+        CHECK_INT_EQ_MSG(lis_length(arr, n), brute_lis(arr, n), "trial=%d n=%zu",
+                         trial, n);
     }
 
     /* ================= coin_change_min ================= */
+    SECTION("coin_change_min");
     int us[] = {1, 5, 10, 25};
     CHECK_INT_EQ(coin_change_min(us, 4, 0), 0);
     CHECK_INT_EQ(coin_change_min(us, 4, 6), 2);   /* 5+1 */
@@ -200,6 +211,7 @@ int main(void) {
     CHECK_INT_EQ(coin_change_min(three, 1, 9), 3);
 
     /* ================= knapsack_01 ================= */
+    SECTION("knapsack_01");
     {
         int w[] = {1, 3, 4, 5};
         int v[] = {1, 4, 5, 7};
@@ -215,6 +227,7 @@ int main(void) {
         CHECK_INT_EQ(knapsack_01(w, v, 1, 10), 10); /* not 20 */
     }
     /* brute-force cross-check at n <= 12 */
+    SECTION("knapsack_01 differential vs brute");
     for (int trial = 0; trial < 150; trial++) {
         int w[12], v[12];
         size_t n = (size_t)(rand() % 13);
@@ -223,7 +236,8 @@ int main(void) {
             w[i] = rand() % 10;
             v[i] = rand() % 20;
         }
-        CHECK_INT_EQ(knapsack_01(w, v, n, cap), brute_knapsack(w, v, n, cap));
+        CHECK_INT_EQ_MSG(knapsack_01(w, v, n, cap), brute_knapsack(w, v, n, cap),
+                         "trial=%d n=%zu cap=%d", trial, n, cap);
     }
 
     CTEST_END();

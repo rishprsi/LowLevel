@@ -4,6 +4,7 @@
 int main(void) {
     /* build with push_front: 1,2,3 pushed -> head is 3 -> 2 -> 1 */
     {
+        SECTION("list_push_front/reverse");
         Node *h = NULL;
         h = list_push_front(h, 1);
         h = list_push_front(h, 2);
@@ -25,6 +26,7 @@ int main(void) {
 
     /* empty + single + length */
     {
+        SECTION("list_length");
         CHECK_INT_EQ(list_length(NULL), 0);
         Node *h = list_push_front(NULL, 7);
         CHECK_INT_EQ(list_length(h), 1);
@@ -34,6 +36,7 @@ int main(void) {
 
     /* middle: odd length 1..5 -> 3 ; even length 1..4 -> 3 (second middle) */
     {
+        SECTION("list_middle");
         Node *odd = NULL;
         for (int i = 5; i >= 1; i--) {
             odd = list_push_front(odd, i); /* yields 1,2,3,4,5 */
@@ -57,6 +60,7 @@ int main(void) {
 
     /* cycle detection */
     {
+        SECTION("list_has_cycle");
         Node *h = NULL;
         for (int i = 4; i >= 1; i--) {
             h = list_push_front(h, i); /* 1,2,3,4 */

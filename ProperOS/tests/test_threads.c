@@ -46,12 +46,14 @@ static void *consumer(void *p) {
 
 int main(void) {
     /* mutex counter: result must be exact */
+    SECTION("mutex_counter_run");
     CHECK_INT_EQ(mutex_counter_run(4, 50000), 200000L);
     CHECK_INT_EQ(mutex_counter_run(1, 1), 1L);
     CHECK_INT_EQ(mutex_counter_run(8, 10000), 80000L);
 
     /* bounded queue, single-threaded FIFO semantics first */
     {
+        SECTION("bounded queue FIFO");
         BoundedQueue q;
         CHECK_INT_EQ(bq_init(&q, 4), 0);
         CHECK_INT_EQ(bq_push(&q, 10), 0);
@@ -74,6 +76,7 @@ int main(void) {
     /* bounded queue: 4 producers / 4 consumers moving exactly 40k items.
      * Capacity 8 << 40k forces real blocking on both conditions. */
     {
+        SECTION("bounded queue producers/consumers");
         BoundedQueue q;
         CHECK_INT_EQ(bq_init(&q, 8), 0);
 
@@ -111,6 +114,7 @@ int main(void) {
     }
 
     /* thread pool */
+    SECTION("tpool_run");
     CHECK_INT_EQ(tpool_run(4, 1000), 1000);
     CHECK_INT_EQ(tpool_run(1, 100), 100);
     CHECK_INT_EQ(tpool_run(8, 0), 0); /* no tasks: clean startup+shutdown */

@@ -17,6 +17,7 @@ int main(void) {
     int vals[64];
 
     /* ---- empty-list behavior ---- */
+    SECTION("empty list behavior");
     CHECK_UINT_EQ(sll_length(list), 0);
     CHECK_PTR_NULL(sll_find(list, 1));
     CHECK_FALSE(sll_remove_value(&list, 1));
@@ -25,6 +26,7 @@ int main(void) {
     sll_free(&list); /* freeing empty list is safe */
 
     /* ---- push_front / push_back ordering ---- */
+    SECTION("sll_push_front / push_back");
     CHECK_TRUE(sll_push_back(&list, 2));  /* [2] */
     CHECK_TRUE(sll_push_front(&list, 1)); /* [1 2] */
     CHECK_TRUE(sll_push_back(&list, 3));  /* [1 2 3] */
@@ -37,6 +39,7 @@ int main(void) {
     CHECK_INT_EQ(vals[3], 4);
 
     /* ---- find ---- */
+    SECTION("sll_find");
     SllNode *n = sll_find(list, 3);
     CHECK_PTR_NONNULL(n);
     CHECK_INT_EQ(n->value, 3);
@@ -44,6 +47,7 @@ int main(void) {
     CHECK_TRUE(sll_find(list, 1) == list); /* finds the head node itself */
 
     /* ---- remove_value: head, middle, tail, absent, first-occurrence ---- */
+    SECTION("sll_remove_value");
     CHECK_TRUE(sll_push_back(&list, 2)); /* [1 2 3 4 2] duplicate */
     CHECK_TRUE(sll_remove_value(&list, 2)); /* removes FIRST 2 -> [1 3 4 2] */
     CHECK_UINT_EQ(collect(list, vals, 64), 4);
@@ -57,6 +61,7 @@ int main(void) {
     CHECK_UINT_EQ(sll_length(list), 2);
 
     /* ---- reverse ---- */
+    SECTION("sll_reverse");
     sll_reverse(&list); /* [4 3] */
     CHECK_UINT_EQ(collect(list, vals, 64), 2);
     CHECK_INT_EQ(vals[0], 4);
@@ -71,6 +76,7 @@ int main(void) {
     CHECK_PTR_NULL(list);
 
     /* single-element reverse */
+    SECTION("sll_reverse single element");
     CHECK_TRUE(sll_push_front(&list, 7));
     sll_reverse(&list);
     CHECK_UINT_EQ(sll_length(list), 1);
@@ -78,6 +84,7 @@ int main(void) {
     sll_free(&list);
 
     /* ---- randomized differential test vs a shadow array ---- */
+    SECTION("differential vs oracle");
     srand(424242);
     static int shadow[512];
     size_t slen = 0;
@@ -85,14 +92,14 @@ int main(void) {
         int r = rand() % 5;
         int x = rand() % 50; /* small range so duplicates + hits happen */
         if (r == 0 && slen < 512) { /* push_front */
-            CHECK_TRUE(sll_push_front(&list, x));
+            CHECK_TRUE_MSG(sll_push_front(&list, x), "op=%d r=%d x=%d", op, r, x);
             for (size_t k = slen; k > 0; k--) {
                 shadow[k] = shadow[k - 1];
             }
             shadow[0] = x;
             slen++;
         } else if (r == 1 && slen < 512) { /* push_back */
-            CHECK_TRUE(sll_push_back(&list, x));
+            CHECK_TRUE_MSG(sll_push_back(&list, x), "op=%d r=%d x=%d", op, r, x);
             shadow[slen++] = x;
         } else if (r == 2) { /* remove first occurrence */
             bool got = sll_remove_value(&list, x);
@@ -107,7 +114,7 @@ int main(void) {
                     break;
                 }
             }
-            CHECK_INT_EQ(got, want);
+            CHECK_INT_EQ_MSG(got, want, "op=%d r=%d x=%d", op, r, x);
         } else if (r == 3) { /* find */
             SllNode *f = sll_find(list, x);
             bool want = false;
@@ -117,7 +124,7 @@ int main(void) {
                     break;
                 }
             }
-            CHECK_INT_EQ(f != NULL, want);
+            CHECK_INT_EQ_MSG(f != NULL, want, "op=%d r=%d x=%d", op, r, x);
         } else { /* reverse */
             sll_reverse(&list);
             for (size_t k = 0; k < slen / 2; k++) {
@@ -126,13 +133,14 @@ int main(void) {
                 shadow[slen - 1 - k] = t;
             }
         }
-        CHECK_UINT_EQ(sll_length(list), slen);
+        CHECK_UINT_EQ_MSG(sll_length(list), slen, "op=%d r=%d x=%d", op, r, x);
     }
+    SECTION("differential final compare");
     static int got[512];
     size_t gn = collect(list, got, 512);
     CHECK_UINT_EQ(gn, slen);
     for (size_t k = 0; k < slen && k < gn; k++) {
-        CHECK_INT_EQ(got[k], shadow[k]);
+        CHECK_INT_EQ_MSG(got[k], shadow[k], "k=%zu", k);
     }
     sll_free(&list);
     CHECK_PTR_NULL(list);

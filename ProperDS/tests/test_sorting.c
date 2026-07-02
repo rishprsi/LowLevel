@@ -36,7 +36,7 @@ static void check_sort(sort_fn f, const char *name, const int *src, size_t n) {
     if (bad != 0) {
         fprintf(stderr, "  (%s failed on n=%zu)\n", name, n);
     }
-    CHECK_INT_EQ(bad, 0);
+    CHECK_INT_EQ_MSG(bad, 0, "sort=%s n=%zu", name, n);
 }
 
 int main(void) {
@@ -44,6 +44,7 @@ int main(void) {
 
     /* ---- adversarial fixed cases, every sort ---- */
     for (int f = 0; f < NFNS; f++) {
+        SECTION(names[f]);
         /* empty */
         check_sort(fns[f], names[f], src, 0);
 
@@ -108,6 +109,7 @@ int main(void) {
             src[i] = rand() % range - range / 2;
         }
         for (int f = 0; f < NFNS; f++) {
+            SECTION(names[f]);
             check_sort(fns[f], names[f], src, n);
         }
     }

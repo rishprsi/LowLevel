@@ -57,6 +57,7 @@ int main(void) {
     /* ---- empty trie ----
      * starts_with(p) is true iff SOME INSERTED WORD starts with p, so on
      * an empty trie even starts_with("") is false. */
+    SECTION("trie_init / empty");
     CHECK_TRUE(trie_init(&t));
     CHECK_FALSE(trie_contains(&t, "a"));
     CHECK_FALSE(trie_contains(&t, ""));
@@ -68,6 +69,7 @@ int main(void) {
     CHECK_TRUE(trie_init(&t));
 
     /* ---- prefix vs whole-word distinction (the classic trap) ---- */
+    SECTION("trie_contains / starts_with");
     CHECK_TRUE(trie_insert(&t, "apple"));
     CHECK_TRUE(trie_contains(&t, "apple"));
     CHECK_FALSE(trie_contains(&t, "app"));     /* prefix, not a word */
@@ -79,11 +81,13 @@ int main(void) {
     CHECK_TRUE(trie_starts_with(&t, "")); /* every word starts with "" */
 
     /* now insert the prefix as its own word */
+    SECTION("trie_insert prefix as word");
     CHECK_TRUE(trie_insert(&t, "app"));
     CHECK_TRUE(trie_contains(&t, "app"));
     CHECK_FALSE(trie_insert(&t, "app")); /* duplicate */
 
     /* ---- empty string is a valid word ---- */
+    SECTION("trie empty-string word");
     CHECK_FALSE(trie_contains(&t, ""));
     CHECK_TRUE(trie_insert(&t, ""));
     CHECK_TRUE(trie_contains(&t, ""));
@@ -91,6 +95,7 @@ int main(void) {
     CHECK_FALSE(trie_contains(&t, ""));
 
     /* ---- removal: word vs prefix-sharing words ---- */
+    SECTION("trie_remove shared prefix");
     CHECK_TRUE(trie_insert(&t, "application"));
     CHECK_TRUE(trie_remove(&t, "apple"));
     CHECK_FALSE(trie_contains(&t, "apple"));
@@ -101,6 +106,7 @@ int main(void) {
     CHECK_FALSE(trie_remove(&t, "banana"));       /* never there */
 
     /* removing the long word must prune, but keep "app" */
+    SECTION("trie_remove pruning");
     CHECK_TRUE(trie_remove(&t, "application"));
     CHECK_FALSE(trie_starts_with(&t, "appl")); /* pruned branch is gone */
     CHECK_TRUE(trie_contains(&t, "app"));
@@ -109,6 +115,7 @@ int main(void) {
     trie_free(&t);
 
     /* ---- randomized differential test vs the word-list oracle ---- */
+    SECTION("differential vs oracle");
     srand(101006);
     CHECK_TRUE(trie_init(&t));
     static const char *alphabet = "abc"; /* tiny alphabet: dense overlaps */
@@ -121,18 +128,24 @@ int main(void) {
         w[len] = '\0';
         int r = rand() % 4;
         if (r == 0 && nwords < MAXW) {
-            CHECK_INT_EQ(trie_insert(&t, w), ora_insert(w));
+            CHECK_INT_EQ_MSG(trie_insert(&t, w), ora_insert(w), "op=%d w=\"%s\"",
+                             op, w);
         } else if (r == 1) {
-            CHECK_INT_EQ(trie_remove(&t, w), ora_remove(w));
+            CHECK_INT_EQ_MSG(trie_remove(&t, w), ora_remove(w), "op=%d w=\"%s\"",
+                             op, w);
         } else if (r == 2) {
-            CHECK_INT_EQ(trie_contains(&t, w), ora_contains(w));
+            CHECK_INT_EQ_MSG(trie_contains(&t, w), ora_contains(w),
+                             "op=%d w=\"%s\"", op, w);
         } else {
-            CHECK_INT_EQ(trie_starts_with(&t, w), ora_starts_with(w));
+            CHECK_INT_EQ_MSG(trie_starts_with(&t, w), ora_starts_with(w),
+                             "op=%d w=\"%s\"", op, w);
         }
     }
     /* final sweep */
+    SECTION("differential final sweep");
     for (size_t i = 0; i < nwords; i++) {
-        CHECK_TRUE(trie_contains(&t, words[i]));
+        CHECK_TRUE_MSG(trie_contains(&t, words[i]), "i=%zu w=\"%s\"", i,
+                       words[i]);
     }
     trie_free(&t);
 

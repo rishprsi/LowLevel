@@ -34,9 +34,22 @@ so memory bugs and undefined behavior are caught the moment a test exercises the
 | `make sol_<module>` | Run one module against its reference solution |
 | `make clean` | Remove `build/` |
 
-A failing check prints `FAIL <file>:<line>: ... (got X, want Y)` and the binary
-exits nonzero. AddressSanitizer / UBSan will additionally abort with a detailed
-report on any out-of-bounds access, leak, or undefined operation.
+When a check fails it prints a labeled block — the section (function/topic under
+test) with a per-section check number, the input expression, and the expected vs
+actual value — then the binary exits nonzero:
+
+```
+FAIL tests/test_strings.c:12 [my_strlen #2]
+  input:    my_strlen("hello")
+  expected: 5
+  actual:   4
+```
+
+The `*_MSG` macro variants (e.g. `CHECK_INT_EQ_MSG(got, want, "seed=%u", seed)`)
+add a `context:` line — useful when the failing input isn't visible in the
+expression. `CTEST_END()` also lists every section that had a failure.
+AddressSanitizer / UBSan will additionally abort with a detailed report on any
+out-of-bounds access, leak, or undefined operation.
 
 ## Modules
 
@@ -46,11 +59,13 @@ report on any out-of-bounds access, leak, or undefined operation.
 | `strings` | C-string traversal/termination, `strncpy` semantics, `strcmp` sign, search |
 | `memory` | `malloc`/`realloc`/`free`, ownership, a growable `IntVec` |
 | `bits` | bitwise ops, masks, popcount, power-of-two, bit reversal |
-| `structs` | data representation: endianness, byte (un)packing, struct layout/padding |
+| `structs` | data representation: endianness, byte (un)packing (struct layout/padding lives in ProperMachine's `layout`) |
 | `funcptr` | function pointers: map / filter / reduce / comparator-based sort |
 | `linkedlist` | pointer-to-pointer, reversal, slow/fast pointers, Floyd cycle detection |
 | `safety` | **buffer overflow**: bounded string ops (`strlcpy`/`strlcat` style) |
 | `ub` | **undefined behavior**: detecting signed overflow, safe shifts, safe loads |
+
+Per-function documentation and background: see [MODULES.md](MODULES.md).
 
 ## Reference solutions
 

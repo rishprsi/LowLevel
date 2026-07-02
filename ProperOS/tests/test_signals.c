@@ -16,6 +16,7 @@ static void on_usr2(int signo) {
 int main(void) {
     /* install_handler delivers via sigaction */
     {
+        SECTION("install_handler");
         CHECK_INT_EQ(install_handler(SIGUSR2, on_usr2), 0);
         usr2_seen = 0;
         raise(SIGUSR2);
@@ -24,6 +25,7 @@ int main(void) {
 
     /* block_signal holds a signal pending; unblock_signal delivers it */
     {
+        SECTION("block_signal / unblock_signal");
         usr2_seen = 0;
         CHECK_INT_EQ(block_signal(SIGUSR2), 0);
         raise(SIGUSR2);
@@ -39,6 +41,7 @@ int main(void) {
 
     /* SIGCHLD-driven reaping of 3 children */
     {
+        SECTION("reap_children_count");
         CHECK_INT_EQ(reap_children_count(), 3);
         /* everything reaped: no zombies left behind */
         CHECK_INT_EQ((int)waitpid(-1, NULL, WNOHANG), -1);
@@ -47,6 +50,7 @@ int main(void) {
 
     /* self-pipe trick: signal raised from THIS process */
     {
+        SECTION("selfpipe_init / selfpipe_wait");
         int fds[2];
         CHECK_INT_EQ(selfpipe_init(fds), 0);
 

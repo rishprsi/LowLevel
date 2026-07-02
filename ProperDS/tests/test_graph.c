@@ -23,6 +23,7 @@ int main(void) {
      *      4 -> 5
      *      6 (isolated)
      */
+    SECTION("graph_init / add_edge");
     CHECK_TRUE(graph_init(&g, 7));
     CHECK_TRUE(graph_add_edge(&g, 0, 1));
     CHECK_TRUE(graph_add_edge(&g, 0, 2));
@@ -33,20 +34,24 @@ int main(void) {
     CHECK_TRUE(graph_add_edge(&g, 4, 5));
 
     /* ---- BFS: level order, neighbors in insertion order ---- */
+    SECTION("graph_bfs_order");
     CHECK_INT_EQ(graph_bfs_order(&g, 0, order), 6); /* 6 unreachable */
     int want_bfs[] = {0, 1, 2, 3, 4, 5};
     check_order(order, want_bfs, 6);
 
     /* ---- recursive DFS: preorder, first-neighbor-first ---- */
+    SECTION("graph_dfs_order");
     CHECK_INT_EQ(graph_dfs_order(&g, 0, order), 6);
     int want_dfs[] = {0, 1, 3, 5, 4, 2};
     check_order(order, want_dfs, 6);
 
     /* ---- iterative DFS must match the recursive order exactly ---- */
+    SECTION("graph_dfs_order_iter");
     CHECK_INT_EQ(graph_dfs_order_iter(&g, 0, order2), 6);
     check_order(order2, want_dfs, 6);
 
     /* traversals from a non-root source */
+    SECTION("graph traversals non-root source");
     CHECK_INT_EQ(graph_bfs_order(&g, 2, order), 3); /* 2 4 5 */
     int want_bfs2[] = {2, 4, 5};
     check_order(order, want_bfs2, 3);
@@ -56,6 +61,7 @@ int main(void) {
     CHECK_INT_EQ(order[0], 6);
 
     /* ---- topo sort on this DAG: smallest-first Kahn is deterministic ---- */
+    SECTION("graph_topo_sort / has_cycle");
     CHECK_TRUE(graph_topo_sort(&g, topo));
     int want_topo[] = {0, 1, 2, 3, 4, 5, 6};
     check_order(topo, want_topo, 7);
@@ -74,6 +80,7 @@ int main(void) {
     graph_free(&g); /* double free is safe */
 
     /* ---- cycle detection ---- */
+    SECTION("graph_has_cycle (directed cycle)");
     CHECK_TRUE(graph_init(&g, 4));
     CHECK_TRUE(graph_add_edge(&g, 0, 1));
     CHECK_TRUE(graph_add_edge(&g, 1, 2));
@@ -84,12 +91,14 @@ int main(void) {
     graph_free(&g);
 
     /* self-loop is a cycle */
+    SECTION("graph_has_cycle (self-loop)");
     CHECK_TRUE(graph_init(&g, 2));
     CHECK_TRUE(graph_add_edge(&g, 1, 1));
     CHECK_TRUE(graph_has_cycle(&g));
     graph_free(&g);
 
     /* edgeless graph: trivially acyclic, topo = identity */
+    SECTION("graph edgeless");
     CHECK_TRUE(graph_init(&g, 3));
     CHECK_FALSE(graph_has_cycle(&g));
     CHECK_TRUE(graph_topo_sort(&g, topo));
@@ -103,10 +112,11 @@ int main(void) {
      *      by construction) topo must succeed and respect all edges;
      *      dfs_order_iter must always equal dfs_order; adding a back
      *      edge must create a cycle ---- */
+    SECTION("differential random DAGs");
     srand(303008);
     for (int trial = 0; trial < 60; trial++) {
         int n = 2 + rand() % 20;
-        CHECK_TRUE(graph_init(&g, n));
+        CHECK_TRUE_MSG(graph_init(&g, n), "trial=%d n=%d", trial, n);
         int eu[128], ev[128];
         int m = rand() % 60;
         int added = 0;
@@ -121,33 +131,36 @@ int main(void) {
                 u = v;
                 v = t;
             }
-            CHECK_TRUE(graph_add_edge(&g, u, v));
+            CHECK_TRUE_MSG(graph_add_edge(&g, u, v), "trial=%d e=%d u=%d v=%d",
+                           trial, e, u, v);
             eu[added] = u;
             ev[added] = v;
             added++;
         }
-        CHECK_FALSE(graph_has_cycle(&g));
-        CHECK_TRUE(graph_topo_sort(&g, topo));
+        CHECK_FALSE_MSG(graph_has_cycle(&g), "trial=%d n=%d", trial, n);
+        CHECK_TRUE_MSG(graph_topo_sort(&g, topo), "trial=%d n=%d", trial, n);
         int pos[32];
         for (int i = 0; i < n; i++) {
             pos[topo[i]] = i;
         }
         for (int e = 0; e < added; e++) {
-            CHECK_TRUE(pos[eu[e]] < pos[ev[e]]);
+            CHECK_TRUE_MSG(pos[eu[e]] < pos[ev[e]], "trial=%d e=%d u=%d v=%d",
+                           trial, e, eu[e], ev[e]);
         }
         int src = rand() % n;
         int c1 = graph_dfs_order(&g, src, order);
         int c2 = graph_dfs_order_iter(&g, src, order2);
-        CHECK_INT_EQ(c1, c2);
+        CHECK_INT_EQ_MSG(c1, c2, "trial=%d n=%d src=%d", trial, n, src);
         check_order(order, order2, c1);
         /* BFS reaches exactly the same vertex set as DFS */
         int c3 = graph_bfs_order(&g, src, order2);
-        CHECK_INT_EQ(c3, c1);
+        CHECK_INT_EQ_MSG(c3, c1, "trial=%d n=%d src=%d", trial, n, src);
         /* close a cycle: from the last topo vertex with an incoming edge
          * back to the first topo vertex on that path */
         if (added > 0) {
-            CHECK_TRUE(graph_add_edge(&g, ev[0], eu[0]));
-            CHECK_TRUE(graph_has_cycle(&g));
+            CHECK_TRUE_MSG(graph_add_edge(&g, ev[0], eu[0]),
+                           "trial=%d u=%d v=%d", trial, ev[0], eu[0]);
+            CHECK_TRUE_MSG(graph_has_cycle(&g), "trial=%d n=%d", trial, n);
         }
         graph_free(&g);
     }

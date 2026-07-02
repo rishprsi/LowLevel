@@ -18,7 +18,7 @@ impl fmt::Display for ParseError {
     /// Human-readable messages — exactly these formats:
     ///
     /// - `Empty` → `empty input`
-    /// - `NotANumber(s)` → `not a number: "SREF"` (the string in double quotes)
+    /// - `NotANumber(s)` → `not a number: "s"` (the offending string in double quotes)
     /// - `OutOfRange(n)` → `out of range: N`
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         todo!("implement Display for ParseError")

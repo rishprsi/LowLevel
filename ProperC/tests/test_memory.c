@@ -7,6 +7,7 @@
 int main(void) {
     /* my_strdup */
     {
+        SECTION("my_strdup");
         const char *orig = "hello";
         char *copy = my_strdup(orig);
         CHECK_PTR_NONNULL(copy);
@@ -24,6 +25,7 @@ int main(void) {
 
     /* IntVec */
     {
+        SECTION("IntVec");
         IntVec v;
         vec_init(&v);
         CHECK_INT_EQ(v.len, 0);

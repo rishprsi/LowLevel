@@ -11,6 +11,7 @@ static int desc(int a, int b) { return (b > a) - (b < a); }
 int main(void) {
     /* int_map */
     {
+        SECTION("int_map");
         int v[] = {1, 2, 3};
         int_map(v, 3, dbl);
         CHECK_INT_EQ(v[0], 2);
@@ -20,6 +21,7 @@ int main(void) {
 
     /* int_filter */
     {
+        SECTION("int_filter");
         int src[] = {1, 2, 3, 4, 5, 6};
         int dst[6];
         size_t k = int_filter(src, 6, dst, is_even);
@@ -31,6 +33,7 @@ int main(void) {
 
     /* int_reduce */
     {
+        SECTION("int_reduce");
         int v[] = {1, 2, 3, 4};
         CHECK_INT_EQ(int_reduce(v, 4, 0, add), 10);
         CHECK_INT_EQ(int_reduce(v, 4, 1, mul), 24);
@@ -39,6 +42,7 @@ int main(void) {
 
     /* sort_ints */
     {
+        SECTION("sort_ints");
         int v[] = {3, 1, 2, 5, 4};
         sort_ints(v, 5, asc);
         for (int i = 0; i < 5; i++) {

@@ -48,6 +48,7 @@ int main(void) {
     UnionFind uf;
 
     /* ---- singletons after init ---- */
+    SECTION("uf_init / find singletons");
     CHECK_TRUE(uf_init(&uf, 10));
     CHECK_INT_EQ(uf_count(&uf), 10);
     for (int i = 0; i < 10; i++) {
@@ -57,6 +58,7 @@ int main(void) {
     CHECK_TRUE(uf_connected(&uf, 3, 3)); /* reflexive */
 
     /* ---- union semantics ---- */
+    SECTION("uf_union / connected");
     CHECK_TRUE(uf_union(&uf, 0, 1));
     CHECK_INT_EQ(uf_count(&uf), 9);
     CHECK_TRUE(uf_connected(&uf, 0, 1));
@@ -65,6 +67,7 @@ int main(void) {
     CHECK_INT_EQ(uf_count(&uf), 9);
 
     /* transitivity through chained unions */
+    SECTION("uf_union transitivity");
     CHECK_TRUE(uf_union(&uf, 1, 2));
     CHECK_TRUE(uf_union(&uf, 3, 4));
     CHECK_TRUE(uf_union(&uf, 2, 4)); /* merges {0,1,2} with {3,4} */
@@ -74,6 +77,7 @@ int main(void) {
     CHECK_FALSE(uf_connected(&uf, 0, 5));
 
     /* all find()s within a set agree on one representative */
+    SECTION("uf_find single representative");
     int rep = uf_find(&uf, 0);
     CHECK_INT_EQ(uf_find(&uf, 1), rep);
     CHECK_INT_EQ(uf_find(&uf, 2), rep);
@@ -81,6 +85,7 @@ int main(void) {
     CHECK_INT_EQ(uf_find(&uf, 4), rep);
 
     /* merge everything -> one component */
+    SECTION("uf merge all + path compression");
     for (int i = 0; i < 9; i++) {
         (void)uf_union(&uf, i, i + 1);
     }
@@ -95,11 +100,13 @@ int main(void) {
     uf_free(&uf); /* double free is safe */
 
     /* n == 0 edge case */
+    SECTION("uf_init n == 0");
     CHECK_TRUE(uf_init(&uf, 0));
     CHECK_INT_EQ(uf_count(&uf), 0);
     uf_free(&uf);
 
     /* ---- randomized differential test vs the label oracle ---- */
+    SECTION("differential vs oracle");
     srand(202007);
     ora_init();
     CHECK_TRUE(uf_init(&uf, ON));
@@ -107,16 +114,21 @@ int main(void) {
         int a = rand() % ON;
         int b = rand() % ON;
         if (rand() % 2 == 0) {
-            CHECK_INT_EQ(uf_union(&uf, a, b), ora_union(a, b));
+            CHECK_INT_EQ_MSG(uf_union(&uf, a, b), ora_union(a, b),
+                             "op=%d a=%d b=%d", op, a, b);
         } else {
-            CHECK_INT_EQ(uf_connected(&uf, a, b), label[a] == label[b]);
+            CHECK_INT_EQ_MSG(uf_connected(&uf, a, b), label[a] == label[b],
+                             "op=%d a=%d b=%d", op, a, b);
         }
-        CHECK_INT_EQ(uf_count(&uf), ora_count());
+        CHECK_INT_EQ_MSG(uf_count(&uf), ora_count(), "op=%d a=%d b=%d", op, a,
+                         b);
     }
     /* final full pairwise agreement */
+    SECTION("differential final pairwise");
     for (int a = 0; a < ON; a++) {
         for (int b = a + 1; b < ON; b++) {
-            CHECK_INT_EQ(uf_connected(&uf, a, b), label[a] == label[b]);
+            CHECK_INT_EQ_MSG(uf_connected(&uf, a, b), label[a] == label[b],
+                             "a=%d b=%d", a, b);
         }
     }
     uf_free(&uf);

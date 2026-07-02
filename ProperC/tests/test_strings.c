@@ -2,13 +2,14 @@
 #include "strings.h"
 
 int main(void) {
-    /* my_strlen */
+    SECTION("my_strlen");
     CHECK_INT_EQ(my_strlen(""), 0);
     CHECK_INT_EQ(my_strlen("hello"), 5);
     CHECK_INT_EQ(my_strlen("a\0b"), 1);
 
     /* my_strcpy */
     {
+        SECTION("my_strcpy");
         char dst[16];
         char *r = my_strcpy(dst, "hello");
         CHECK(r == dst);
@@ -17,6 +18,7 @@ int main(void) {
 
     /* my_strncpy semantics */
     {
+        SECTION("my_strncpy");
         /* src shorter than n: padded with '\0' */
         char dst[8];
         for (int i = 0; i < 8; i++) {
@@ -42,7 +44,7 @@ int main(void) {
         CHECK_INT_EQ(d2[3], 'x'); /* not terminated */
     }
 
-    /* my_strcmp sign */
+    SECTION("my_strcmp");
     CHECK_INT_EQ(my_strcmp("abc", "abc"), 0);
     CHECK(my_strcmp("abc", "abd") < 0);
     CHECK(my_strcmp("abd", "abc") > 0);
@@ -51,6 +53,7 @@ int main(void) {
 
     /* my_strcat */
     {
+        SECTION("my_strcat");
         char dst[16] = "foo";
         char *r = my_strcat(dst, "bar");
         CHECK(r == dst);
@@ -59,6 +62,7 @@ int main(void) {
 
     /* my_strchr */
     {
+        SECTION("my_strchr");
         const char *s = "hello";
         CHECK(my_strchr(s, 'l') == s + 2);
         CHECK(my_strchr(s, 'h') == s);
@@ -68,6 +72,7 @@ int main(void) {
 
     /* my_strstr */
     {
+        SECTION("my_strstr");
         const char *h = "hello world";
         CHECK(my_strstr(h, "wor") == h + 6);
         CHECK(my_strstr(h, "hello") == h);
@@ -78,6 +83,7 @@ int main(void) {
 
     /* str_reverse */
     {
+        SECTION("str_reverse");
         char a[] = "abc";
         str_reverse(a);
         CHECK_STR_EQ(a, "cba");
@@ -92,7 +98,7 @@ int main(void) {
         CHECK_STR_EQ(e, "");
     }
 
-    /* is_palindrome */
+    SECTION("is_palindrome");
     CHECK_TRUE(is_palindrome("racecar"));
     CHECK_TRUE(is_palindrome("abba"));
     CHECK_TRUE(is_palindrome(""));

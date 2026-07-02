@@ -52,11 +52,13 @@ int main(void) {
     char key[32];
 
     /* ---- known FNV-1a vectors (the documented contract hash) ---- */
+    SECTION("hashchain_fnv1a");
     CHECK_UINT_EQ(hashchain_fnv1a(""), 0xcbf29ce484222325ULL);
     CHECK_UINT_EQ(hashchain_fnv1a("a"), 0xaf63dc4c8601ec8cULL);
     CHECK_UINT_EQ(hashchain_fnv1a("foobar"), 0x85944171f73967e8ULL);
 
     /* ---- basic put/get/delete ---- */
+    SECTION("hashchain put/get/delete");
     CHECK_TRUE(hashchain_init(&h));
     CHECK_UINT_EQ(h.nbuckets, 8);
     CHECK_UINT_EQ(hashchain_len(&h), 0);
@@ -74,18 +76,21 @@ int main(void) {
     CHECK_TRUE(hashchain_validate(&h));
 
     /* upsert overwrites, does not duplicate */
+    SECTION("hashchain_put upsert");
     CHECK_TRUE(hashchain_put(&h, "one", 111));
     CHECK_UINT_EQ(hashchain_len(&h), 2);
     CHECK_TRUE(hashchain_get(&h, "one", &out));
     CHECK_INT_EQ(out, 111);
 
     /* the table owns its key copies: mutate the caller's buffer */
+    SECTION("hashchain owns key copies");
     strcpy(key, "caller");
     CHECK_TRUE(hashchain_put(&h, key, 42));
     strcpy(key, "XXXXXX");
     CHECK_TRUE(hashchain_get(&h, "caller", &out));
     CHECK_INT_EQ(out, 42);
 
+    SECTION("hashchain_delete");
     CHECK_TRUE(hashchain_delete(&h, "one"));
     CHECK_FALSE(hashchain_get(&h, "one", &out));
     CHECK_FALSE(hashchain_delete(&h, "one")); /* second delete: absent */
@@ -94,6 +99,7 @@ int main(void) {
     hashchain_free(&h);
 
     /* ---- resize: 20 keys must push 8 buckets past load factor 1.0 ---- */
+    SECTION("hashchain resize / rehash");
     CHECK_TRUE(hashchain_init(&h));
     for (int i = 0; i < 20; i++) {
         snprintf(key, sizeof(key), "grow%d", i);
@@ -111,6 +117,7 @@ int main(void) {
     hashchain_free(&h);
 
     /* ---- randomized differential test: ~2000 ops vs the flat oracle ---- */
+    SECTION("differential vs oracle");
     srand(555001);
     CHECK_TRUE(hashchain_init(&h));
     for (int op = 0; op < 2000; op++) {
@@ -118,29 +125,33 @@ int main(void) {
         snprintf(key, sizeof(key), "k%d", rand() % KEYSPACE);
         if (r == 0) { /* put */
             int v = rand();
-            CHECK_TRUE(hashchain_put(&h, key, v));
+            CHECK_TRUE_MSG(hashchain_put(&h, key, v), "op=%d key=%s", op, key);
             ora_put(key, v);
         } else if (r == 1) { /* get */
             OraPair *p = ora_find(key);
             bool got = hashchain_get(&h, key, &out);
-            CHECK_INT_EQ(got, p != NULL);
+            CHECK_INT_EQ_MSG(got, p != NULL, "op=%d key=%s", op, key);
             if (p && got) {
-                CHECK_INT_EQ(out, p->value);
+                CHECK_INT_EQ_MSG(out, p->value, "op=%d key=%s", op, key);
             }
         } else { /* delete */
             bool want = ora_delete(key);
-            CHECK_INT_EQ(hashchain_delete(&h, key), want);
+            CHECK_INT_EQ_MSG(hashchain_delete(&h, key), want, "op=%d key=%s", op,
+                             key);
         }
-        CHECK_UINT_EQ(hashchain_len(&h), olen);
+        CHECK_UINT_EQ_MSG(hashchain_len(&h), olen, "op=%d key=%s", op, key);
         if (op % 100 == 0) {
-            CHECK_TRUE(hashchain_validate(&h));
+            CHECK_TRUE_MSG(hashchain_validate(&h), "op=%d key=%s", op, key);
         }
     }
     /* final sweep: every oracle pair present with the right value */
+    SECTION("differential final sweep");
     CHECK_TRUE(hashchain_validate(&h));
     for (size_t i = 0; i < olen; i++) {
-        CHECK_TRUE(hashchain_get(&h, opairs[i].key, &out));
-        CHECK_INT_EQ(out, opairs[i].value);
+        CHECK_TRUE_MSG(hashchain_get(&h, opairs[i].key, &out), "i=%zu key=%s", i,
+                       opairs[i].key);
+        CHECK_INT_EQ_MSG(out, opairs[i].value, "i=%zu key=%s", i,
+                         opairs[i].key);
     }
     hashchain_free(&h);
     hashchain_free(&h); /* double free is safe per contract */

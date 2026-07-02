@@ -107,10 +107,12 @@ static void *client_main(void *arg) {
 
 int main(void) {
     /* bad arguments are rejected without touching the network */
+    SECTION("echo_poll_serve bad args");
     CHECK_INT_EQ(echo_poll_serve(-1, 1), -1);
     CHECK_INT_EQ(echo_poll_serve(-1, 0), -1);
     CHECK_INT_EQ(echo_poll_serve(-1, MUX_MAX_CLIENTS + 1), -1);
 
+    SECTION("echo_poll_serve concurrent clients");
     uint16_t port = 0;
     int lfd = make_listener(&port);
     CHECK(lfd >= 0);

@@ -4,6 +4,7 @@
 int main(void) {
     /* swap_int */
     {
+        SECTION("swap_int");
         int a = 3, b = 7;
         swap_int(&a, &b);
         CHECK_INT_EQ(a, 7);
@@ -12,6 +13,7 @@ int main(void) {
 
     /* reverse_array */
     {
+        SECTION("reverse_array");
         int v[] = {1, 2, 3, 4, 5};
         reverse_array(v, 5);
         int want[] = {5, 4, 3, 2, 1};
@@ -31,6 +33,7 @@ int main(void) {
 
     /* my_memcpy (non-overlapping) */
     {
+        SECTION("my_memcpy");
         char src[] = "hello world";
         char dst[16] = {0};
         void *r = my_memcpy(dst, src, sizeof("hello world"));
@@ -40,6 +43,7 @@ int main(void) {
 
     /* my_memmove (overlapping, forward and backward) */
     {
+        SECTION("my_memmove");
         char buf[16] = "abcdefgh";
         /* shift "abcdef" right by 2 -> dst overlaps src */
         my_memmove(buf + 2, buf, 6);
@@ -55,6 +59,7 @@ int main(void) {
 
     /* rotate_left */
     {
+        SECTION("rotate_left");
         int v[] = {1, 2, 3, 4, 5};
         rotate_left(v, 5, 2);
         int want[] = {3, 4, 5, 1, 2};

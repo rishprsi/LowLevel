@@ -65,6 +65,7 @@ static void *spsc_consumer(void *p) {
 int main(void) {
     /* spinlock under contention */
     {
+        SECTION("spinlock");
         pthread_t t[SPIN_THREADS];
         for (int i = 0; i < SPIN_THREADS; i++) {
             CHECK_INT_EQ(pthread_create(&t[i], NULL, spin_worker, NULL), 0);
@@ -77,6 +78,7 @@ int main(void) {
 
     /* spsc_init argument validation */
     {
+        SECTION("spsc_init");
         SpscRing r;
         CHECK_INT_EQ(spsc_init(&r, 0), -1);
         CHECK_INT_EQ(spsc_init(&r, 1), -1);
@@ -87,6 +89,7 @@ int main(void) {
 
     /* SPSC single-threaded semantics: FIFO, full, empty */
     {
+        SECTION("spsc ring");
         SpscRing r;
         CHECK_INT_EQ(spsc_init(&r, 4), 0); /* usable capacity 3 */
         long v = -1;
@@ -110,6 +113,7 @@ int main(void) {
 
     /* SPSC cross-thread: order and count preserved through a tiny ring */
     {
+        SECTION("spsc ring cross-thread");
         SpscRing r;
         CHECK_INT_EQ(spsc_init(&r, 64), 0);
         SpscStats stats = {&r, 0, 0, 0, 0};

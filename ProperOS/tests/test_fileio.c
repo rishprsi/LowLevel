@@ -27,6 +27,7 @@ int main(void) {
     char path1[64], path2[64], path3[64];
 
     /* read_all / write_all round-trip */
+    SECTION("read_all / write_all");
     const char msg[] = "hello, file i/o";
     int fd = make_temp(msg, sizeof msg - 1, path1);
     CHECK_TRUE(fd >= 0);
@@ -44,6 +45,7 @@ int main(void) {
     CHECK_INT_EQ(read_all(fd, buf, sizeof buf), (long)(sizeof msg - 1));
 
     /* file_size_fd preserves the current offset */
+    SECTION("file_size_fd");
     CHECK_TRUE(lseek(fd, 5, SEEK_SET) == 5);
     CHECK_INT_EQ(file_size_fd(fd), (long)(sizeof msg - 1));
     CHECK_INT_EQ((long)lseek(fd, 0, SEEK_CUR), 5);
@@ -51,6 +53,7 @@ int main(void) {
     unlink(path1);
 
     /* copy_file: binary-safe (embedded NUL bytes) */
+    SECTION("copy_file");
     const unsigned char blob[] = {'a', 0, 'b', 0, 0, 'c', 255, 128, 0, 'z'};
     fd = make_temp(blob, sizeof blob, path2);
     CHECK_TRUE(fd >= 0);
@@ -73,6 +76,7 @@ int main(void) {
     close(cfd);
 
     /* copy_file with a bigger-than-one-buffer file (forces looping) */
+    SECTION("copy_file large");
     size_t big_n = 100 * 1024 + 37;
     unsigned char *big = malloc(big_n);
     CHECK_PTR_NONNULL(big);
@@ -95,6 +99,7 @@ int main(void) {
     free(back);
 
     /* copy_file error path: nonexistent source */
+    SECTION("copy_file errors");
     CHECK_INT_EQ(copy_file("/nonexistent/no/such/file", path3), -1);
 
     unlink(path1);

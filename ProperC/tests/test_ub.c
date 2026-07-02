@@ -4,6 +4,7 @@
 int main(void) {
     /* checked_add_i32 */
     {
+        SECTION("checked_add_i32");
         int32_t out = 999;
         CHECK_TRUE(checked_add_i32(1, 2, &out));
         CHECK_INT_EQ(out, 3);
@@ -21,6 +22,7 @@ int main(void) {
 
     /* checked_mul_i32 */
     {
+        SECTION("checked_mul_i32");
         int32_t out = 0;
         CHECK_TRUE(checked_mul_i32(3, 4, &out));
         CHECK_INT_EQ(out, 12);
@@ -35,14 +37,14 @@ int main(void) {
         CHECK_FALSE(checked_mul_i32(100000, 100000, &out));
     }
 
-    /* avg_no_overflow */
+    SECTION("avg_no_overflow");
     CHECK_INT_EQ(avg_no_overflow(2, 4), 3);
     CHECK_INT_EQ(avg_no_overflow(-4, -2), -3);
     CHECK_INT_EQ(avg_no_overflow(INT32_MAX, INT32_MAX), INT32_MAX);
     CHECK_INT_EQ(avg_no_overflow(INT32_MIN, INT32_MIN), INT32_MIN);
     CHECK_INT_EQ(avg_no_overflow(INT32_MAX, INT32_MIN), 0);
 
-    /* safe_lshift */
+    SECTION("safe_lshift");
     CHECK_UINT_EQ(safe_lshift(1u, 0), 1u);
     CHECK_UINT_EQ(safe_lshift(1u, 31), 0x80000000u);
     CHECK_UINT_EQ(safe_lshift(1u, 32), 0u);   /* would be UB if done directly */
@@ -51,6 +53,7 @@ int main(void) {
 
     /* load_u32_le */
     {
+        SECTION("load_u32_le");
         uint8_t b1[4] = {0x04, 0x03, 0x02, 0x01};
         CHECK_UINT_EQ(load_u32_le(b1), 0x01020304u);
         uint8_t b2[4] = {0xFF, 0xFF, 0xFF, 0xFF};

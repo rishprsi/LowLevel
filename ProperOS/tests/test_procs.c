@@ -4,6 +4,7 @@
 int main(void) {
     /* run_command: exit statuses */
     {
+        SECTION("run_command");
         char *argv_true[] = {"true", NULL};
         CHECK_INT_EQ(run_command("/usr/bin/true", argv_true), 0);
 
@@ -17,6 +18,7 @@ int main(void) {
 
     /* spawn_capture: /bin/echo with args */
     {
+        SECTION("spawn_capture");
         char out[128];
         char *argv_echo[] = {"echo", "hello", "capture", NULL};
         int n = spawn_capture("/bin/echo", argv_echo, out, sizeof out);
@@ -26,6 +28,7 @@ int main(void) {
 
     /* spawn_capture: empty output */
     {
+        SECTION("spawn_capture empty output");
         char out[16];
         char *argv_true[] = {"true", NULL};
         CHECK_INT_EQ(spawn_capture("/usr/bin/true", argv_true, out, sizeof out), 0);
@@ -34,6 +37,7 @@ int main(void) {
 
     /* spawn_capture: child failure -> -1 */
     {
+        SECTION("spawn_capture child failure");
         char out[16];
         char *argv_false[] = {"false", NULL};
         CHECK_INT_EQ(spawn_capture("/usr/bin/false", argv_false, out, sizeof out), -1);
@@ -42,6 +46,7 @@ int main(void) {
     /* spawn_capture: output longer than the buffer is truncated, still
      * NUL-terminated, and the child is fully drained (no deadlock) */
     {
+        SECTION("spawn_capture truncation");
         char out[8];
         char *argv_echo[] = {"echo", "0123456789abcdef", NULL};
         int n = spawn_capture("/bin/echo", argv_echo, out, sizeof out);

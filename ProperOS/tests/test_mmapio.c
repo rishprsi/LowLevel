@@ -53,6 +53,7 @@ int main(void) {
 
     /* mmap_count_byte on a known blob (includes NUL bytes) */
     {
+        SECTION("mmap_count_byte");
         const unsigned char blob[] = {'a', 'b', 'a', 0, 'a', 0, 'x'};
         CHECK_INT_EQ(make_temp(blob, sizeof blob, path), 0);
         CHECK_INT_EQ(mmap_count_byte(path, 'a'), 3);
@@ -63,6 +64,7 @@ int main(void) {
 
     /* empty file: must return 0, not crash on mmap(len=0) */
     {
+        SECTION("mmap empty file");
         CHECK_INT_EQ(make_temp("", 0, path), 0);
         CHECK_INT_EQ(mmap_count_byte(path, 'a'), 0);
         CHECK_INT_EQ(mmap_upper_inplace(path), 0); /* no-op success */
@@ -71,6 +73,7 @@ int main(void) {
 
     /* a file bigger than one page */
     {
+        SECTION("mmap_count_byte large");
         size_t n = 3 * 4096 + 123;
         unsigned char *big = malloc(n);
         CHECK_PTR_NONNULL(big);
@@ -89,6 +92,7 @@ int main(void) {
 
     /* mmap_upper_inplace: verify through ordinary read(2) */
     {
+        SECTION("mmap_upper_inplace");
         const char *text = "Hello, mmap World! 123 xyz";
         CHECK_INT_EQ(make_temp(text, strlen(text), path), 0);
         CHECK_INT_EQ(mmap_upper_inplace(path), 0);
@@ -103,6 +107,7 @@ int main(void) {
     }
 
     /* error paths */
+    SECTION("mmap error paths");
     CHECK_INT_EQ(mmap_count_byte("/nonexistent/no/file", 'a'), -1);
     CHECK_INT_EQ(mmap_upper_inplace("/nonexistent/no/file"), -1);
 

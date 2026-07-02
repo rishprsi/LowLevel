@@ -44,6 +44,7 @@ static void *client_main(void *arg) {
 
 int main(void) {
     /* --- send_all / recv_until semantics on a socketpair --- */
+    SECTION("send_all / recv_until");
     int sp[2];
     CHECK_INT_EQ(socketpair(AF_UNIX, SOCK_STREAM, 0, sp), 0);
     CHECK_INT_EQ((int)send_all(sp[0], "abc\ndef", 7), 7);
@@ -64,6 +65,7 @@ int main(void) {
 
     /* --- real loopback TCP, 20 rounds: a leaked fd per round would
      *     eventually make tcp_listen_loopback start failing --- */
+    SECTION("tcp loopback echo (20 rounds)");
     for (int iter = 0; iter < 20; iter++) {
         uint16_t port = 0; /* 0 = kernel picks; getsockname must fill it in */
         int lfd = tcp_listen_loopback(&port);
@@ -94,6 +96,7 @@ int main(void) {
     }
 
     /* one more listener must still succeed after all those rounds */
+    SECTION("tcp_listen_loopback after rounds");
     uint16_t port = 0;
     int lfd = tcp_listen_loopback(&port);
     CHECK(lfd >= 0);

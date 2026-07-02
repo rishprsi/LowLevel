@@ -40,6 +40,7 @@ int main(void) {
      *     link_to_a      (symlink -> a.txt; must NOT be counted or followed)
      *   => nfiles = 4, ndirs = 3 (sub1, sub1/deep, sub2), du = 120
      */
+    SECTION("fsmeta fixture setup");
     char root[] = "/tmp/properos_fsmeta_XXXXXX";
     CHECK_PTR_NONNULL(mkdtemp(root));
 
@@ -62,25 +63,30 @@ int main(void) {
     CHECK_INT_EQ(symlink(target, linkpath), 0);
 
     /* walk_tree */
+    SECTION("walk_tree");
     long nfiles = -1, ndirs = -1;
     CHECK_INT_EQ(walk_tree(root, &nfiles, &ndirs), 0);
     CHECK_INT_EQ(nfiles, 4);
     CHECK_INT_EQ(ndirs, 3);
 
     /* an empty dir walks fine */
+    SECTION("walk_tree empty dir");
     CHECK_INT_EQ(walk_tree(sub2, &nfiles, &ndirs), 0);
     CHECK_INT_EQ(nfiles, 0);
     CHECK_INT_EQ(ndirs, 0);
 
     /* error: root doesn't exist */
+    SECTION("walk_tree errors");
     CHECK_INT_EQ(walk_tree("/nonexistent/no/dir", &nfiles, &ndirs), -1);
 
     /* du_bytes */
+    SECTION("du_bytes");
     CHECK_INT_EQ(du_bytes(root), 120);
     CHECK_INT_EQ(du_bytes(sub2), 0);
     CHECK_INT_EQ(du_bytes("/nonexistent/no/dir"), -1);
 
     /* is_same_file with a hard link */
+    SECTION("is_same_file");
     char hard[PATH_MAX];
     snprintf(hard, sizeof hard, "%s/hardlink_to_a", root);
     CHECK_INT_EQ(link(target, hard), 0);
@@ -92,6 +98,7 @@ int main(void) {
     CHECK_INT_EQ(is_same_file(target, "/nonexistent/no/file"), -1);
 
     /* the hard link bumped nfiles: both names are regular files */
+    SECTION("walk_tree after hard link");
     CHECK_INT_EQ(walk_tree(root, &nfiles, &ndirs), 0);
     CHECK_INT_EQ(nfiles, 5);
     CHECK_INT_EQ(du_bytes(root), 130);

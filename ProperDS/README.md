@@ -35,9 +35,23 @@ undefined behavior are caught the moment a test exercises them.
 | `make sol_<module>` | Run one module against its reference solution |
 | `make clean` | Remove `build/` |
 
-A failing check prints `FAIL <file>:<line>: ... (got X, want Y)` and the binary
-exits nonzero. AddressSanitizer / UBSan will additionally abort with a detailed
-report on any out-of-bounds access, leak, or undefined operation.
+When a check fails it prints a labeled block — the section (function/topic under
+test) with a per-section check number, the input expression, and the expected vs
+actual value — then the binary exits nonzero:
+
+```
+FAIL tests/test_vector.c:106 [differential vs oracle #873]
+  input:    vector_get(&v, i)
+  expected: 604316783
+  actual:   -12345
+  context:  op=322 r=3 i=7
+```
+
+The randomized/differential loops use the `*_MSG` macros to add the `context:`
+line, which pins the exact failing input (operation index, random selector,
+key, ...) so a failure is reproducible. `CTEST_END()` also lists every section
+that had a failure. AddressSanitizer / UBSan will additionally abort with a
+detailed report on any out-of-bounds access, leak, or undefined operation.
 
 ## How the tests verify correctness
 
@@ -58,6 +72,8 @@ Beyond ordinary unit tests with edge cases, this repo leans on two disciplines:
   mutation that broke the structure.
 
 ## Modules
+
+Per-function documentation and background for every module: see [MODULES.md](MODULES.md).
 
 | Module | Concepts verified |
 | --- | --- |

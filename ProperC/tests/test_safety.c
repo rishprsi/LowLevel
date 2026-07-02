@@ -6,6 +6,7 @@
 int main(void) {
     /* safe_strcpy: fits */
     {
+        SECTION("safe_strcpy (fits)");
         char dst[16];
         memset(dst, 'Z', sizeof(dst));
         size_t r = safe_strcpy(dst, sizeof(dst), "hello");
@@ -15,6 +16,7 @@ int main(void) {
 
     /* safe_strcpy: truncation, must NOT overflow and must NUL-terminate */
     {
+        SECTION("safe_strcpy (truncation)");
         char dst[4];
         memset(dst, 'Z', sizeof(dst));
         size_t r = safe_strcpy(dst, sizeof(dst), "hello"); /* only "hel" fits */
@@ -25,6 +27,7 @@ int main(void) {
 
     /* safe_strcpy: dstsize 0 writes nothing */
     {
+        SECTION("safe_strcpy (dstsize 0)");
         char dst[2] = {'A', 'B'};
         size_t r = safe_strcpy(dst, 0, "hello");
         CHECK_INT_EQ(r, 5);
@@ -33,6 +36,7 @@ int main(void) {
 
     /* safe_strcat: fits */
     {
+        SECTION("safe_strcat (fits)");
         char dst[16] = "foo";
         size_t r = safe_strcat(dst, sizeof(dst), "bar");
         CHECK_INT_EQ(r, 6);
@@ -41,6 +45,7 @@ int main(void) {
 
     /* safe_strcat: truncation */
     {
+        SECTION("safe_strcat (truncation)");
         char dst[6] = "foo"; /* room for 2 more chars + NUL */
         size_t r = safe_strcat(dst, sizeof(dst), "bar");
         CHECK_INT_EQ(r, 6);  /* tried to make length 6 */
@@ -50,6 +55,7 @@ int main(void) {
 
     /* copy_n_safe */
     {
+        SECTION("copy_n_safe");
         uint8_t dst[4] = {0};
         uint8_t src[5] = {1, 2, 3, 4, 5};
         CHECK_TRUE(copy_n_safe(dst, sizeof(dst), src, 4));

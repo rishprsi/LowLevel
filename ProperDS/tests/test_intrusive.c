@@ -36,24 +36,28 @@ int main(void) {
     int ids[16];
 
     /* ---- LIST_INIT static initializer ---- */
+    SECTION("LIST_INIT static initializer");
     struct list_head statik = LIST_INIT(statik);
     CHECK_TRUE(list_empty(&statik));
     CHECK_TRUE(statik.next == &statik);
     CHECK_TRUE(statik.prev == &statik);
 
     /* ---- runtime init ---- */
+    SECTION("list_head_init");
     struct list_head todo;
     list_head_init(&todo);
     CHECK_TRUE(list_empty(&todo));
     CHECK_UINT_EQ(collect_ids(&todo, ids, 16), 0);
 
     /* ---- container_of recovers the embedding struct ---- */
+    SECTION("container_of");
     struct task a = {.id = 1, .payload = 100};
     struct task b = {.id = 2, .payload = 200};
     struct task c = {.id = 3, .payload = 300};
     CHECK_TRUE(container_of(&a.link, struct task, link) == &a);
 
     /* ---- list_add inserts after head (stack order) ---- */
+    SECTION("list_add");
     list_add(&a.link, &todo); /* [1] */
     CHECK_FALSE(list_empty(&todo));
     list_add(&b.link, &todo); /* [2 1] */
@@ -72,12 +76,14 @@ int main(void) {
     CHECK_INT_EQ(container_of(todo.prev, struct task, link)->payload, 100);
 
     /* ---- list_add_tail inserts before head (queue order) ---- */
+    SECTION("list_add_tail");
     struct task d = {.id = 4, .payload = 400};
     list_add_tail(&d.link, &todo); /* [3 2 1 4] */
     CHECK_UINT_EQ(collect_ids(&todo, ids, 16), 4);
     CHECK_INT_EQ(ids[3], 4);
 
     /* ---- list_del: middle, front, back ---- */
+    SECTION("list_del");
     list_del(&b.link); /* [3 1 4] */
     CHECK_UINT_EQ(collect_ids(&todo, ids, 16), 3);
     CHECK_INT_EQ(ids[0], 3);
@@ -93,6 +99,7 @@ int main(void) {
     CHECK_UINT_EQ(collect_ids(&todo, ids, 16), 0);
 
     /* ---- a deleted node can be re-added ---- */
+    SECTION("re-add deleted node");
     list_add_tail(&a.link, &todo);
     list_add_tail(&b.link, &todo); /* [1 2] */
     CHECK_UINT_EQ(collect_ids(&todo, ids, 16), 2);
@@ -100,6 +107,7 @@ int main(void) {
     CHECK_INT_EQ(ids[1], 2);
 
     /* ---- moving an entry between two lists ---- */
+    SECTION("move entry between lists");
     struct list_head done;
     list_head_init(&done);
     list_del(&a.link);

@@ -33,7 +33,10 @@ with your predicted integer, build, and the tests compute the ground truth
 a wrong implementation:
 
 ```
-FAIL tests/test_promotions.c:29: PRED_NEG1_LT_1U == (neg1 < one_u) ? 1 : 0 (got 1, want 0)
+FAIL tests/test_promotions.c:26 [signed/unsigned comparison #1]
+  input:    PRED_NEG1_LT_1U
+  expected: 0
+  actual:   1
 ```
 
 Everything you're asked to predict is well-defined C17 (no UB); `layout` is
@@ -76,6 +79,8 @@ additionally platform-specific by nature and documents its assumptions
 | `floats` | predict + implement | decimal fractions in binary, float precision limits, NaN/inf semantics; then `float_bits`/`bits_float` via `memcpy`, `my_isnan` from the bit pattern, sign bit of `-0.0f`, ULP distance |
 | `layout` | predict | struct padding and alignment on arm64: member offsets, tail padding, member-ordering waste, nested structs, array stride (13 predictions) |
 | `bench` | provided | **not a test** — a measurement drill, see below |
+
+Per-module documentation and background: see [MODULES.md](MODULES.md).
 
 ## The bench target (the Phase 2.4 measurement drill)
 

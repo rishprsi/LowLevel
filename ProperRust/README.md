@@ -6,6 +6,8 @@ correctness. You implement the stubs in `src/`; the integration tests in
 (ProperC etc.) — the side-track for a C programmer learning Rust
 (Phase 3.5 / 4.3 of the study guide).
 
+Per-function documentation and background: see [MODULES.md](MODULES.md).
+
 ## Red → green, the Rust way
 
 **This repo's "red" differs from the C repos.** In ProperC an unimplemented
@@ -20,6 +22,25 @@ So "red" means *panicking tests*, not compile errors. Same discipline,
 different mechanism. (Bonus: the borrow checker itself is part of the test —
 plenty of wrong implementations here won't even compile, and that's Rust
 doing its job.)
+
+## Which test failed?
+
+Unlike the C repos (where a shared `SECTION` label names the function on each
+failing assertion), Rust's test harness already does this for you: every
+exercise is its own `#[test] fn`, so `cargo test` prints the failing test
+function by name and the exact `assert_eq!`/panic file, line, and column, e.g.
+
+```
+---- test_ownership::longest_returns_longer stdout ----
+thread 'longest_returns_longer' panicked at tests/test_ownership.rs:21:5:
+assertion `left == right` failed
+  left: "hi"
+ right: "hello"
+```
+
+Run a single failing test with `cargo test <name>` (substring match) or a
+whole module with `cargo test --test test_<module>`, and add `-- --nocapture`
+to see any `println!` output.
 
 ## Workflow
 

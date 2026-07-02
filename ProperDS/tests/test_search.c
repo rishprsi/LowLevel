@@ -34,6 +34,7 @@ int main(void) {
     size_t n = 8;
 
     /* binary_search_idx: hit must land on a matching element */
+    SECTION("binary_search_idx");
     int idx = binary_search_idx(a, n, 3);
     CHECK_TRUE(idx >= 0 && idx < (int)n);
     CHECK_INT_EQ(a[idx], 3);
@@ -46,6 +47,7 @@ int main(void) {
     CHECK_INT_EQ(binary_search_idx(a, n, 99), -1); /* above range */
 
     /* lower/upper: duplicates run [1, 4) for key 3 */
+    SECTION("lower_bound / upper_bound");
     CHECK_UINT_EQ(lower_bound(a, n, 3), 1);
     CHECK_UINT_EQ(upper_bound(a, n, 3), 4);
     /* absent key: both point at the insertion spot */
@@ -63,11 +65,13 @@ int main(void) {
     CHECK_UINT_EQ(upper_bound(a, n, 10), n);
 
     /* ---- empty array ---- */
+    SECTION("empty array");
     CHECK_INT_EQ(binary_search_idx(NULL, 0, 5), -1);
     CHECK_UINT_EQ(lower_bound(NULL, 0, 5), 0);
     CHECK_UINT_EQ(upper_bound(NULL, 0, 5), 0);
 
     /* ---- all-equal array ---- */
+    SECTION("all-equal array");
     int eq[] = {4, 4, 4, 4, 4};
     CHECK_UINT_EQ(lower_bound(eq, 5, 4), 0);
     CHECK_UINT_EQ(upper_bound(eq, 5, 4), 5);
@@ -77,6 +81,7 @@ int main(void) {
     CHECK_TRUE(idx >= 0 && idx < 5);
 
     /* single element */
+    SECTION("single element");
     int one[] = {7};
     CHECK_INT_EQ(binary_search_idx(one, 1, 7), 0);
     CHECK_INT_EQ(binary_search_idx(one, 1, 6), -1);
@@ -84,6 +89,7 @@ int main(void) {
     CHECK_UINT_EQ(upper_bound(one, 1, 7), 1);
 
     /* ---- fuzz: hundreds of random sorted arrays vs linear oracles ---- */
+    SECTION("differential vs oracle");
     srand(707012);
     static int arr[512];
     for (int trial = 0; trial < 400; trial++) {
@@ -97,15 +103,25 @@ int main(void) {
             int key = rand() % (range + 4) - 2; /* in and out of range */
             size_t lb = lower_bound(arr, len, key);
             size_t ub = upper_bound(arr, len, key);
-            CHECK_UINT_EQ(lb, ora_lower(arr, len, key));
-            CHECK_UINT_EQ(ub, ora_upper(arr, len, key));
-            CHECK_TRUE(lb <= ub);
+            CHECK_UINT_EQ_MSG(lb, ora_lower(arr, len, key),
+                              "trial=%d probe=%d len=%zu key=%d", trial, probe,
+                              len, key);
+            CHECK_UINT_EQ_MSG(ub, ora_upper(arr, len, key),
+                              "trial=%d probe=%d len=%zu key=%d", trial, probe,
+                              len, key);
+            CHECK_TRUE_MSG(lb <= ub, "trial=%d probe=%d len=%zu key=%d", trial,
+                           probe, len, key);
             int bs = binary_search_idx(arr, len, key);
             if (lb < ub) { /* key present */
-                CHECK_TRUE(bs >= (int)lb && bs < (int)ub);
-                CHECK_INT_EQ(arr[bs], key);
+                CHECK_TRUE_MSG(bs >= (int)lb && bs < (int)ub,
+                               "trial=%d probe=%d len=%zu key=%d", trial, probe,
+                               len, key);
+                CHECK_INT_EQ_MSG(arr[bs], key,
+                                 "trial=%d probe=%d len=%zu key=%d", trial,
+                                 probe, len, key);
             } else {
-                CHECK_INT_EQ(bs, -1);
+                CHECK_INT_EQ_MSG(bs, -1, "trial=%d probe=%d len=%zu key=%d",
+                                 trial, probe, len, key);
             }
         }
     }

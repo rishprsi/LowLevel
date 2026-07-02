@@ -7,6 +7,8 @@ machine, with client threads dribbling bytes one at a time, so partial
 reads/writes and fd hygiene actually matter. Everything builds with
 `-Wall -Wextra -Werror -fsanitize=address,undefined`.
 
+Per-function documentation and background: see [MODULES.md](MODULES.md).
+
 ## Workflow (red → green)
 
 1. Pick a module (start with `byteorder`).
@@ -36,9 +38,22 @@ reads/writes and fd hygiene actually matter. Everything builds with
 | `make sol_<module>` | Run one module against its reference solution |
 | `make clean` | Remove `build/` |
 
-A failing check prints `FAIL <file>:<line>: ... (got X, want Y)` and the binary
-exits nonzero. AddressSanitizer / UBSan will additionally abort with a detailed
-report on any out-of-bounds access, leak, or undefined operation.
+When a check fails it prints a labeled block — the section (function/topic under
+test) with a per-section check number, the input expression, and the expected vs
+actual value — then the binary exits nonzero:
+
+```
+FAIL tests/test_urlparse.c:34 [url_parse #3]
+  input:    u.port
+  expected: 8080
+  actual:   80
+```
+
+The `*_MSG` macro variants (e.g. `CHECK_INT_EQ_MSG(got, want, "case=%d", i)`)
+add a `context:` line — useful when the failing input isn't visible in the
+expression. `CTEST_END()` also lists every section that had a failure.
+AddressSanitizer / UBSan will additionally abort with a detailed report on any
+out-of-bounds access, leak, or undefined operation.
 
 ## Modules
 

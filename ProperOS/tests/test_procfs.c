@@ -13,6 +13,7 @@ int main(void) {
     CTEST_END(); /* 0 checks, exit 0 */
 #else
     /* count_maps_regions: any live process has several mappings */
+    SECTION("count_maps_regions");
     int n = count_maps_regions();
     CHECK_TRUE(n > 0);
 
@@ -24,16 +25,19 @@ int main(void) {
     free(extra);
 
     /* read_status_field: Pid must equal getpid() */
+    SECTION("read_status_field Pid");
     char buf[128];
     CHECK_INT_EQ(read_status_field("Pid", buf, sizeof buf), 0);
     CHECK_INT_EQ(atoi(buf), (int)getpid());
 
     /* Name: value is non-empty and has no trailing newline */
+    SECTION("read_status_field Name");
     CHECK_INT_EQ(read_status_field("Name", buf, sizeof buf), 0);
     CHECK_TRUE(strlen(buf) > 0);
     CHECK_TRUE(buf[strlen(buf) - 1] != '\n');
 
     /* unknown field -> -1 */
+    SECTION("read_status_field unknown");
     CHECK_INT_EQ(read_status_field("NoSuchFieldXYZ", buf, sizeof buf), -1);
 
     CTEST_END();

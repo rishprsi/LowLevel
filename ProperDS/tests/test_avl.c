@@ -50,6 +50,7 @@ int main(void) {
     Avl t;
 
     /* ---- empty tree ---- */
+    SECTION("avl_init / empty");
     avl_init(&t);
     CHECK_UINT_EQ(avl_size(&t), 0);
     CHECK_INT_EQ(avl_height(&t), 0);
@@ -60,6 +61,7 @@ int main(void) {
 
     /* ---- the four classic rotation cases, checked via validate() ---- */
     /* LL: insert descending */
+    SECTION("avl_insert LL rotation");
     avl_init(&t);
     CHECK_TRUE(avl_insert(&t, 30));
     CHECK_TRUE(avl_insert(&t, 20));
@@ -70,6 +72,7 @@ int main(void) {
     avl_free(&t);
 
     /* RR: insert ascending */
+    SECTION("avl_insert RR rotation");
     avl_init(&t);
     CHECK_TRUE(avl_insert(&t, 10));
     CHECK_TRUE(avl_insert(&t, 20));
@@ -79,6 +82,7 @@ int main(void) {
     avl_free(&t);
 
     /* LR */
+    SECTION("avl_insert LR rotation");
     avl_init(&t);
     CHECK_TRUE(avl_insert(&t, 30));
     CHECK_TRUE(avl_insert(&t, 10));
@@ -88,6 +92,7 @@ int main(void) {
     avl_free(&t);
 
     /* RL */
+    SECTION("avl_insert RL rotation");
     avl_init(&t);
     CHECK_TRUE(avl_insert(&t, 10));
     CHECK_TRUE(avl_insert(&t, 30));
@@ -97,6 +102,7 @@ int main(void) {
     avl_free(&t);
 
     /* ---- sorted insertion: height must stay logarithmic ---- */
+    SECTION("avl_insert sorted / logarithmic height");
     avl_init(&t);
     for (int i = 0; i < 1023; i++) {
         CHECK_TRUE(avl_insert(&t, i));
@@ -108,6 +114,7 @@ int main(void) {
     CHECK_TRUE(avl_height(&t) >= 10);
     CHECK_TRUE(avl_height(&t) <= 14);
     /* remove everything, validating along the way */
+    SECTION("avl_remove all + validate");
     for (int i = 0; i < 1023; i++) {
         CHECK_TRUE(avl_remove(&t, i));
         if (i % 64 == 0) {
@@ -121,26 +128,32 @@ int main(void) {
 
     /* ---- randomized differential test: 1000 insert/removes with
      *      validate() after EVERY operation ---- */
+    SECTION("differential vs oracle + validate");
     srand(888004);
     avl_init(&t);
     for (int op = 0; op < 1000; op++) {
         int r = rand() % 3;
         int key = rand() % 300;
         if (r == 0) {
-            CHECK_INT_EQ(avl_insert(&t, key), ora_insert(key));
+            CHECK_INT_EQ_MSG(avl_insert(&t, key), ora_insert(key),
+                             "op=%d key=%d", op, key);
         } else if (r == 1) {
-            CHECK_INT_EQ(avl_remove(&t, key), ora_remove(key));
+            CHECK_INT_EQ_MSG(avl_remove(&t, key), ora_remove(key),
+                             "op=%d key=%d", op, key);
         } else {
-            CHECK_INT_EQ(avl_contains(&t, key), ora_contains(key));
+            CHECK_INT_EQ_MSG(avl_contains(&t, key), ora_contains(key),
+                             "op=%d key=%d", op, key);
         }
-        CHECK_TRUE(avl_validate(&t)); /* after every single op */
-        CHECK_UINT_EQ(avl_size(&t), olen);
+        CHECK_TRUE_MSG(avl_validate(&t), "op=%d r=%d key=%d", op, r,
+                       key); /* after every single op */
+        CHECK_UINT_EQ_MSG(avl_size(&t), olen, "op=%d r=%d key=%d", op, r, key);
     }
     /* final inorder must equal the oracle's sorted contents */
+    SECTION("differential final inorder");
     static int inord[ORA_CAP];
     avl_inorder(&t, inord);
     for (size_t i = 0; i < olen; i++) {
-        CHECK_INT_EQ(inord[i], ora[i]);
+        CHECK_INT_EQ_MSG(inord[i], ora[i], "i=%zu", i);
     }
     avl_free(&t);
 

@@ -6,6 +6,7 @@
 int main(void) {
     /* trim_ws */
     {
+        SECTION("trim_ws");
         char a[] = "       2\n";
         CHECK_STR_EQ(trim_ws(a), "2");
         char b[] = "no-trim";
@@ -20,6 +21,7 @@ int main(void) {
 
     /* pipeline2: echo "hello world" | wc -w  ->  2 */
     {
+        SECTION("pipeline2");
         char *cmd1[] = {"/bin/echo", "hello world", NULL};
         char *cmd2[] = {"/usr/bin/wc", "-w", NULL};
         char out[64];
@@ -29,6 +31,7 @@ int main(void) {
 
     /* pipeline2: echo through cat is identity */
     {
+        SECTION("pipeline2 identity");
         char *cmd1[] = {"/bin/echo", "pass-through", NULL};
         char *cmd2[] = {"/bin/cat", NULL};
         char out[64];
@@ -38,6 +41,7 @@ int main(void) {
 
     /* pipeline2: a failing stage makes the whole pipeline fail */
     {
+        SECTION("pipeline2 failing stage");
         char *cmd1[] = {"/bin/echo", "x", NULL};
         char *cmd2[] = {"/usr/bin/false", NULL};
         char out[64];
@@ -46,6 +50,7 @@ int main(void) {
 
     /* pipeline3: echo "a b c d" | cat | wc -w  ->  4 */
     {
+        SECTION("pipeline3");
         char *cmd1[] = {"/bin/echo", "a b c d", NULL};
         char *cmd2[] = {"/bin/cat", NULL};
         char *cmd3[] = {"/usr/bin/wc", "-w", NULL};
