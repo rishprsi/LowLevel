@@ -44,8 +44,8 @@ int vec_get(const IntVec *v, size_t i) {
 }
 
 void vec_free(IntVec *v) {
-  int *newData = realloc(v->data, 0);
-  v->data = newData;
+  free(v->data);
+  v->data = NULL;
   v->len = 0;
   v->cap = 0;
 }
