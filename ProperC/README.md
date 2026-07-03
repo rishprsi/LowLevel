@@ -46,8 +46,13 @@ FAIL tests/test_strings.c:12 [my_strlen #2]
 ```
 
 The `*_MSG` macro variants (e.g. `CHECK_INT_EQ_MSG(got, want, "seed=%u", seed)`)
-add a `context:` line — useful when the failing input isn't visible in the
-expression. `CTEST_END()` also lists every section that had a failure.
+append the concrete variable values to the `input:` line in parentheses — useful
+when the input is a variable whose value isn't visible in the expression.
+
+Each function (`SECTION`) runs until its **first** failing check: that failure
+is printed and the rest of that section is skipped, so every function in the
+file still runs but you get exactly one failure block per function (a fuzz loop
+shows one block, not thousands). `CTEST_END()` lists every section that failed.
 AddressSanitizer / UBSan will additionally abort with a detailed report on any
 out-of-bounds access, leak, or undefined operation.
 

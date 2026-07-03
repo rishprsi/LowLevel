@@ -41,16 +41,20 @@ actual value — then the binary exits nonzero:
 
 ```
 FAIL tests/test_vector.c:106 [differential vs oracle #873]
-  input:    vector_get(&v, i)
+  input:    vector_get(&v, i)  (op=322 r=3 i=7)
   expected: 604316783
   actual:   -12345
-  context:  op=322 r=3 i=7
 ```
 
-The randomized/differential loops use the `*_MSG` macros to add the `context:`
-line, which pins the exact failing input (operation index, random selector,
-key, ...) so a failure is reproducible. `CTEST_END()` also lists every section
-that had a failure. AddressSanitizer / UBSan will additionally abort with a
+The randomized/differential loops use the `*_MSG` macros to append the concrete
+variable values to the `input:` line in parentheses (operation index, random
+selector, key, ...), so a failure is reproducible from the exact input.
+
+Each function (`SECTION`) runs until its **first** failing check: that failure
+is printed and the rest of that section is skipped, so every function in the
+file still runs but you get exactly one failure block per function — a fuzz loop
+that diverges thousands of times shows a single block. `CTEST_END()` lists every
+section that failed. AddressSanitizer / UBSan will additionally abort with a
 detailed report on any out-of-bounds access, leak, or undefined operation.
 
 ## How the tests verify correctness

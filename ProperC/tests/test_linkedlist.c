@@ -67,9 +67,10 @@ int main(void) {
         }
         CHECK_FALSE(list_has_cycle(h));
 
-        /* make a cycle: tail->next = h, then verify, then break and free */
+        /* make a cycle: tail->next = h, then verify, then break and free.
+         * Bounded so a buggy push_front that already made a cycle can't hang. */
         Node *tail = h;
-        while (tail->next != NULL) {
+        for (int guard = 0; tail->next != NULL && guard < 100000; guard++) {
             tail = tail->next;
         }
         tail->next = h;

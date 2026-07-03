@@ -11,24 +11,29 @@
  * exercise. A failing check prints a labeled block:
  *
  *   FAIL file:line [section #N]
- *     input:    <the expression under test>
+ *     input:    <the expression under test>  (var=value ...)
  *     expected: <what it should have been>
  *     actual:   <what it actually was>
- *     context:  <optional; only from the *_MSG variants>
  *
  * where `section` is the current SECTION label and `#N` is the index of the
- * check within that section — so a failure tells you exactly which function,
- * which of its checks broke, the input, and the expected vs actual value.
- * CTEST_END() also lists every section that had a failure. The program exits
+ * check within that section.
+ *
+ * ABORT-ON-FIRST-FAILURE PER SECTION: within a section, checks run until the
+ * first failure; that failure is printed, then the remaining checks in the
+ * SAME section are skipped (their expressions are still evaluated so any side
+ * effects happen, but they are not recorded or printed) until the next
+ * SECTION() re-arms. So every function in the file still runs, but each one
+ * stops at its first failure — a fuzz loop that diverges shows ONE block, not
+ * thousands. CTEST_END() lists every section that failed and the program exits
  * nonzero, so `make test` halts on the first bad module.
  *
- * The *_MSG variants take a trailing printf-style format + args and add a
- * `context:` line. Use them in randomized / differential loops where the
- * failing input (seed, index, op sequence) is not visible in the static
- * expression, e.g.
+ * The *_MSG variants take a trailing printf-style format + args and append the
+ * concrete variable values to the `input:` line in parentheses. Use them where
+ * the input is a variable (e.g. a fuzz-loop index) rather than a literal:
  *
- *   CHECK_INT_EQ_MSG(vec_get(&v, i), shadow[i], "op=%d i=%zu seed=%u",
- *                    op, i, seed);
+ *   CHECK_INT_EQ_MSG(vec_get(&v, i), shadow[i], "op=%d i=%zu", op, i);
+ *
+ * prints:  input:    vec_get(&v, i)  (op=322 i=7)
  *
  * Because every test is a separate translation unit / binary, it's fine for
  * these counters to live in the header as statics.
@@ -44,26 +49,32 @@ static int ctest_failed = 0;
 static const char *ctest_section = "(top level)";
 static int ctest_section_idx = 0;
 
-/* Distinct sections that had at least one failure (for the summary line). */
+/* Set once the current section has failed; suppresses the rest of its checks
+ * until the next SECTION() clears it. */
+static int ctest_section_aborted = 0;
+
+/* Distinct sections that had a failure (for the summary line). */
 static const char *ctest_failed_sections[128];
 static int ctest_failed_section_count = 0;
 
 /*
- * SECTION("fn") — label the function/topic the following checks exercise.
- * The label plus a per-section check number appears on every failure line,
- * and every failing label is listed in the end-of-run summary.
+ * SECTION("fn") — label the function/topic the following checks exercise, and
+ * re-arm checking (clears the abort flag so the next failure is shown).
  */
 #define SECTION(name)                                                          \
     do {                                                                       \
         ctest_section = (name);                                                \
         ctest_section_idx = 0;                                                 \
+        ctest_section_aborted = 0;                                             \
     } while (0)
 
-/* Record a failure and remember its section (deduplicated) for the summary.
+/* Record a failure, remember its section (deduplicated) for the summary, and
+ * arm the abort flag so the rest of this section is skipped.
  * Marked unused so a test that skips (calls CTEST_END with no CHECK, e.g. a
  * Linux-only module on macOS) still compiles clean under -Werror. */
 __attribute__((unused)) static void ctest_note_fail(void) {
     ctest_failed++;
+    ctest_section_aborted = 1;
     for (int _i = 0; _i < ctest_failed_section_count; _i++) {
         if (ctest_failed_sections[_i] == ctest_section) {
             return;
@@ -80,34 +91,40 @@ __attribute__((unused)) static void ctest_note_fail(void) {
     fprintf(stderr, "FAIL %s:%d [%s #%d]\n", __FILE__, __LINE__,               \
             ctest_section, ctest_section_idx)
 
-/* Optional trailing "context:" line for the *_MSG variants. */
+/* Print the start of the input line (no trailing newline yet). */
+#define CTEST__IN(instr) fprintf(stderr, "  input:    %s", (instr))
+
+/* Optional concrete values appended to the input line, from the *_MSG variants.
+ * The base checks pass CTEST__NOCTX, which appends nothing. */
+#define CTEST__NOCTX ((void)0)
 #define CTEST__CTX(...)                                                        \
     do {                                                                       \
-        fprintf(stderr, "  context:  ");                                       \
+        fprintf(stderr, "  (");                                                \
         fprintf(stderr, __VA_ARGS__);                                          \
-        fprintf(stderr, "\n");                                                 \
+        fprintf(stderr, ")");                                                  \
     } while (0)
 
 /* ---- boolean checks ---------------------------------------------------- */
 
 #define CTEST__BOOL(cond, instr, exp, act, CTX)                                \
     do {                                                                       \
+        int _c = (cond) ? 1 : 0;                                               \
+        if (ctest_section_aborted) break;                                      \
         ctest_section_idx++;                                                   \
-        if (cond) {                                                            \
+        if (_c) {                                                              \
             ctest_passed++;                                                    \
         } else {                                                               \
             ctest_note_fail();                                                 \
             CTEST__HDR();                                                      \
-            fprintf(stderr,                                                    \
-                    "  input:    %s\n  expected: %s\n  actual:   %s\n",         \
-                    instr, exp, act);                                          \
+            CTEST__IN(instr);                                                  \
             CTX;                                                               \
+            fprintf(stderr, "\n  expected: %s\n  actual:   %s\n", exp, act);   \
         }                                                                      \
     } while (0)
 
-#define CHECK(cond)        CTEST__BOOL((cond), #cond, "true", "false", (void)0)
-#define CHECK_TRUE(cond)   CTEST__BOOL((cond), #cond, "true", "false", (void)0)
-#define CHECK_FALSE(cond)  CTEST__BOOL(!(cond), #cond, "false", "true", (void)0)
+#define CHECK(cond)       CTEST__BOOL((cond), #cond, "true", "false", CTEST__NOCTX)
+#define CHECK_TRUE(cond)  CTEST__BOOL((cond), #cond, "true", "false", CTEST__NOCTX)
+#define CHECK_FALSE(cond) CTEST__BOOL(!(cond), #cond, "false", "true", CTEST__NOCTX)
 
 #define CHECK_MSG(cond, ...)                                                   \
     CTEST__BOOL((cond), #cond, "true", "false", CTEST__CTX(__VA_ARGS__))
@@ -120,22 +137,22 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__INT_EQ(got, want, CTX)                                          \
     do {                                                                       \
-        ctest_section_idx++;                                                   \
         long long _g = (long long)(got);                                       \
         long long _w = (long long)(want);                                      \
+        if (ctest_section_aborted) break;                                      \
+        ctest_section_idx++;                                                   \
         if (_g == _w) {                                                        \
             ctest_passed++;                                                    \
         } else {                                                               \
             ctest_note_fail();                                                 \
             CTEST__HDR();                                                      \
-            fprintf(stderr,                                                    \
-                    "  input:    %s\n  expected: %lld\n  actual:   %lld\n",     \
-                    #got, _w, _g);                                             \
+            CTEST__IN(#got);                                                   \
             CTX;                                                               \
+            fprintf(stderr, "\n  expected: %lld\n  actual:   %lld\n", _w, _g); \
         }                                                                      \
     } while (0)
 
-#define CHECK_INT_EQ(got, want)          CTEST__INT_EQ(got, want, (void)0)
+#define CHECK_INT_EQ(got, want)          CTEST__INT_EQ(got, want, CTEST__NOCTX)
 #define CHECK_INT_EQ_MSG(got, want, ...)                                       \
     CTEST__INT_EQ(got, want, CTEST__CTX(__VA_ARGS__))
 
@@ -143,22 +160,22 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__UINT_EQ(got, want, CTX)                                         \
     do {                                                                       \
-        ctest_section_idx++;                                                   \
         unsigned long long _g = (unsigned long long)(got);                     \
         unsigned long long _w = (unsigned long long)(want);                    \
+        if (ctest_section_aborted) break;                                      \
+        ctest_section_idx++;                                                   \
         if (_g == _w) {                                                        \
             ctest_passed++;                                                    \
         } else {                                                               \
             ctest_note_fail();                                                 \
             CTEST__HDR();                                                      \
-            fprintf(stderr,                                                    \
-                    "  input:    %s\n  expected: %llu\n  actual:   %llu\n",     \
-                    #got, _w, _g);                                             \
+            CTEST__IN(#got);                                                   \
             CTX;                                                               \
+            fprintf(stderr, "\n  expected: %llu\n  actual:   %llu\n", _w, _g); \
         }                                                                      \
     } while (0)
 
-#define CHECK_UINT_EQ(got, want)          CTEST__UINT_EQ(got, want, (void)0)
+#define CHECK_UINT_EQ(got, want)          CTEST__UINT_EQ(got, want, CTEST__NOCTX)
 #define CHECK_UINT_EQ_MSG(got, want, ...)                                      \
     CTEST__UINT_EQ(got, want, CTEST__CTX(__VA_ARGS__))
 
@@ -166,22 +183,23 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__STR_EQ(got, want, CTX)                                          \
     do {                                                                       \
-        ctest_section_idx++;                                                   \
         const char *_g = (got);                                                \
         const char *_w = (want);                                               \
+        if (ctest_section_aborted) break;                                      \
+        ctest_section_idx++;                                                   \
         if (_g && _w && strcmp(_g, _w) == 0) {                                 \
             ctest_passed++;                                                    \
         } else {                                                               \
             ctest_note_fail();                                                 \
             CTEST__HDR();                                                      \
-            fprintf(stderr,                                                    \
-                    "  input:    %s\n  expected: \"%s\"\n  actual:   \"%s\"\n", \
-                    #got, _w ? _w : "(null)", _g ? _g : "(null)");             \
+            CTEST__IN(#got);                                                   \
             CTX;                                                               \
+            fprintf(stderr, "\n  expected: \"%s\"\n  actual:   \"%s\"\n",      \
+                    _w ? _w : "(null)", _g ? _g : "(null)");                   \
         }                                                                      \
     } while (0)
 
-#define CHECK_STR_EQ(got, want)          CTEST__STR_EQ(got, want, (void)0)
+#define CHECK_STR_EQ(got, want)          CTEST__STR_EQ(got, want, CTEST__NOCTX)
 #define CHECK_STR_EQ_MSG(got, want, ...)                                       \
     CTEST__STR_EQ(got, want, CTEST__CTX(__VA_ARGS__))
 
@@ -189,22 +207,23 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__PTR(p, wantnull, CTX)                                           \
     do {                                                                       \
-        ctest_section_idx++;                                                   \
         void *_p = (void *)(p);                                                \
+        if (ctest_section_aborted) break;                                      \
+        ctest_section_idx++;                                                   \
         if ((wantnull) ? (_p == NULL) : (_p != NULL)) {                        \
             ctest_passed++;                                                    \
         } else {                                                               \
             ctest_note_fail();                                                 \
             CTEST__HDR();                                                      \
-            fprintf(stderr,                                                    \
-                    "  input:    %s\n  expected: %s\n  actual:   %p\n",         \
-                    #p, (wantnull) ? "NULL" : "non-NULL", _p);                 \
+            CTEST__IN(#p);                                                     \
             CTX;                                                               \
+            fprintf(stderr, "\n  expected: %s\n  actual:   %p\n",              \
+                    (wantnull) ? "NULL" : "non-NULL", _p);                     \
         }                                                                      \
     } while (0)
 
-#define CHECK_PTR_NULL(p)             CTEST__PTR(p, 1, (void)0)
-#define CHECK_PTR_NONNULL(p)          CTEST__PTR(p, 0, (void)0)
+#define CHECK_PTR_NULL(p)             CTEST__PTR(p, 1, CTEST__NOCTX)
+#define CHECK_PTR_NONNULL(p)          CTEST__PTR(p, 0, CTEST__NOCTX)
 #define CHECK_PTR_NULL_MSG(p, ...)    CTEST__PTR(p, 1, CTEST__CTX(__VA_ARGS__))
 #define CHECK_PTR_NONNULL_MSG(p, ...) CTEST__PTR(p, 0, CTEST__CTX(__VA_ARGS__))
 
