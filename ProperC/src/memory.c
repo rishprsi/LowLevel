@@ -1,51 +1,35 @@
 #include "memory.h"
-#include "string.h"
-#include <stdlib.h>
+#include "todo.h"
 
 char *my_strdup(const char *s) {
-  char *dup = malloc(sizeof(char *));
-  memcpy(dup, s, sizeof(char *));
-  return dup;
+    (void)s;
+    TODO("implement my_strdup");
 }
 
 void vec_init(IntVec *v) {
-  v->data = NULL;
-  v->cap = 0;
-  v->len = 0;
+    (void)v;
+    TODO("implement vec_init");
 }
 
 bool vec_push(IntVec *v, int x) {
-  if (v->cap == v->len) {
-    const size_t newSize = v->cap == 0 ? 4 : v->cap * 2;
-    int *newData = realloc(v->data, sizeof(int) * newSize);
-    if (newData == NULL) {
-      return false;
-    }
-    v->data = newData;
-    v->cap = newSize;
-  }
-  v->data[v->len++] = x;
-  return true;
+    (void)v;
+    (void)x;
+    TODO("implement vec_push");
 }
 
 bool vec_pop(IntVec *v, int *out) {
-  if (v->len == 0) {
-    return false;
-  }
-  *out = v->data[--v->len];
-  return true;
+    (void)v;
+    (void)out;
+    TODO("implement vec_pop");
 }
 
 int vec_get(const IntVec *v, size_t i) {
-  if (i >= v->len) {
-    return -1;
-  }
-  return v->data[i];
+    (void)v;
+    (void)i;
+    TODO("implement vec_get");
 }
 
 void vec_free(IntVec *v) {
-  free(v->data);
-  v->data = NULL;
-  v->len = 0;
-  v->cap = 0;
+    (void)v;
+    TODO("implement vec_free");
 }
