@@ -31,11 +31,6 @@ uint32_t safe_lshift(uint32_t x, unsigned k) {
   } else {
     return x << k;
   }
-  /* if (((uint64_t)x) << k > INT32_MAX) { */
-  /*   return 0; */
-  /* } else { */
-  /*   return x << k; */
-  /* } */
 }
 
 uint32_t load_u32_le(const uint8_t *p) {
