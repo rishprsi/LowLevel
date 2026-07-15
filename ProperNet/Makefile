@@ -7,7 +7,7 @@ CC  = cc
 SAN     ?= address,undefined
 SANFLAG  = $(if $(strip $(SAN)),-fsanitize=$(SAN),)
 
-CFLAGS  = -std=c17 -Wall -Wextra -Werror -g $(SANFLAG) -Isrc -Itests
+CFLAGS  = -std=c17 -Wall -Wextra -Werror -g $(SANFLAG) -Isrc -Itests $(EXTRA_CFLAGS)
 
 # The threaded socket tests use pthreads. On macOS (and most modern platforms)
 # pthreads live in libc, so no extra flag is needed; on older Linux toolchains

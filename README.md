@@ -14,6 +14,7 @@ stubs you implement (hard compile errors until you do), `tests/` is the spec,
 | `ProperOS` | Phase 3 + Phase 5 §5.1 (APUE) | file I/O, fork/exec/wait, pipes, signals (self-pipe trick), pthreads, atomics/SPSC, mmap, stat/dirwalk, /proc (Linux) |
 | `ProperNet` | Phase 4 §4.1 — Networking | byte order, URL + HTTP/1.1 parsing, sockets with partial I/O, poll-based multiplexing |
 | `ProperRust` | Phase 3.5 / 4.3 — Rust side-track | ownership, collections, Box linked list, traits, error design, threads/channels, thread pool (`todo!()` stubs, `cargo test`) |
+| `ProperInterview` | Canonical Interview Sprint (vault note 12) | timed interview drills: C (strings, dynamic array, hashmap, LRU), Python + pytest (incl. test-*writing* drills), Go (`dupes`, `workerpool` w/ `-race`), and `linux/` — Ubuntu VM walkthroughs + break/fix scenario labs |
 
 ## Universal commands (C repos)
 

@@ -60,6 +60,14 @@ Each function (`SECTION`) runs until its **first** failing check: that failure
 is printed and the rest of that section is skipped, so every function in the
 file still runs but you get exactly one failure block per function (a fuzz loop
 shows one block, not thousands). `CTEST_END()` lists every section that failed.
+
+A built-in watchdog guards against hangs: if any check (or the code between
+checks) runs longer than 10s, it prints `*** TIMEOUT ... in section: <name>`
+and exits, so an infinite loop in your implementation names the function it's
+stuck in instead of spinning forever. Raise the limit for a genuinely slow
+module with `make test_<m> EXTRA_CFLAGS=-DCTEST_TIMEOUT_SECS=30`. (This
+watchdog can't catch the sanitizer hang some sandboxes hit at startup — use
+`SAN=undefined` there.)
 AddressSanitizer / UBSan will additionally abort with a detailed report on any
 out-of-bounds access, leak, or undefined operation.
 

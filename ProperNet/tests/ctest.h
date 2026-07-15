@@ -39,8 +39,22 @@
  * these counters to live in the header as statics.
  */
 
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
+/*
+ * Watchdog: if any single check (including the function call it makes) or the
+ * code between checks runs longer than CTEST_TIMEOUT_SECS, a SIGALRM fires and
+ * we print which SECTION was running, then exit 124. This turns an infinite
+ * loop (in your implementation or a test loop) from a silent hang into a
+ * message naming the culprit function. Override at compile time with
+ * -DCTEST_TIMEOUT_SECS=30 for a legitimately slow module.
+ */
+#ifndef CTEST_TIMEOUT_SECS
+#define CTEST_TIMEOUT_SECS 10
+#endif
 
 static int ctest_passed = 0;
 static int ctest_failed = 0;
@@ -66,6 +80,7 @@ static int ctest_failed_section_count = 0;
         ctest_section = (name);                                                \
         ctest_section_idx = 0;                                                 \
         ctest_section_aborted = 0;                                             \
+        ctest_arm();                                                           \
     } while (0)
 
 /* Record a failure, remember its section (deduplicated) for the summary, and
@@ -84,6 +99,61 @@ __attribute__((unused)) static void ctest_note_fail(void) {
         (int)(sizeof(ctest_failed_sections) / sizeof(ctest_failed_sections[0]))) {
         ctest_failed_sections[ctest_failed_section_count++] = ctest_section;
     }
+}
+
+/* async-signal-safe writes for the watchdog handler (no fprintf in a signal
+ * handler). */
+static void ctest__wstr(const char *s) {
+    if (s) {
+        ssize_t r = write(2, s, strlen(s));
+        (void)r;
+    }
+}
+static void ctest__wint(int v) {
+    char buf[24];
+    int i = (int)sizeof(buf);
+    unsigned u;
+    if (v < 0) {
+        ctest__wstr("-");
+        u = (unsigned)(-(long)v);
+    } else {
+        u = (unsigned)v;
+    }
+    if (u == 0) {
+        ctest__wstr("0");
+        return;
+    }
+    while (u && i > 0) {
+        buf[--i] = (char)('0' + (u % 10));
+        u /= 10;
+    }
+    ssize_t r = write(2, buf + i, (size_t)((int)sizeof(buf) - i));
+    (void)r;
+}
+
+/* SIGALRM handler: name the section that was running, then bail out. */
+__attribute__((unused)) static void ctest_on_timeout(int sig) {
+    (void)sig;
+    ctest__wstr("\n*** TIMEOUT after ");
+    ctest__wint(CTEST_TIMEOUT_SECS);
+    ctest__wstr("s in section: ");
+    ctest__wstr(ctest_section);
+    ctest__wstr(" (reached check #");
+    ctest__wint(ctest_section_idx + 1);
+    ctest__wstr(")\n    Likely an infinite loop or a stuck call in this "
+                "function.\n");
+    _exit(124);
+}
+
+/* (Re)arm the watchdog. Installs the handler once, then restarts the timer so
+ * each check/section gets a fresh CTEST_TIMEOUT_SECS budget. */
+__attribute__((unused)) static void ctest_arm(void) {
+    static int installed = 0;
+    if (!installed) {
+        signal(SIGALRM, ctest_on_timeout);
+        installed = 1;
+    }
+    alarm(CTEST_TIMEOUT_SECS);
 }
 
 /* Print the "FAIL file:line [section #N]" header for the current check. */
@@ -108,6 +178,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__BOOL(cond, instr, exp, act, CTX)                                \
     do {                                                                       \
+        ctest_arm();                                                           \
         int _c = (cond) ? 1 : 0;                                               \
         if (ctest_section_aborted) break;                                      \
         ctest_section_idx++;                                                   \
@@ -137,6 +208,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__INT_EQ(got, want, CTX)                                          \
     do {                                                                       \
+        ctest_arm();                                                           \
         long long _g = (long long)(got);                                       \
         long long _w = (long long)(want);                                      \
         if (ctest_section_aborted) break;                                      \
@@ -160,6 +232,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__UINT_EQ(got, want, CTX)                                         \
     do {                                                                       \
+        ctest_arm();                                                           \
         unsigned long long _g = (unsigned long long)(got);                     \
         unsigned long long _w = (unsigned long long)(want);                    \
         if (ctest_section_aborted) break;                                      \
@@ -183,6 +256,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__STR_EQ(got, want, CTX)                                          \
     do {                                                                       \
+        ctest_arm();                                                           \
         const char *_g = (got);                                                \
         const char *_w = (want);                                               \
         if (ctest_section_aborted) break;                                      \
@@ -207,6 +281,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST__PTR(p, wantnull, CTX)                                           \
     do {                                                                       \
+        ctest_arm();                                                           \
         void *_p = (void *)(p);                                                \
         if (ctest_section_aborted) break;                                      \
         ctest_section_idx++;                                                   \
@@ -231,6 +306,7 @@ __attribute__((unused)) static void ctest_note_fail(void) {
 
 #define CTEST_END()                                                            \
     do {                                                                       \
+        alarm(0); /* cancel the watchdog before the summary print */           \
         if (ctest_failed_section_count > 0) {                                  \
             fprintf(stderr, "%s: %d passed, %d failed (in:", __FILE__,         \
                     ctest_passed, ctest_failed);                               \

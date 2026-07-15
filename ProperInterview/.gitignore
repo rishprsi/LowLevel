@@ -1,0 +1,7 @@
+build/
+solutions/
+*.o
+*.dSYM/
+.venv/
+__pycache__/
+.pytest_cache/

@@ -7,7 +7,7 @@ CC  = cc
 SAN     ?= address,undefined
 SANFLAG  = $(if $(strip $(SAN)),-fsanitize=$(SAN),)
 
-CFLAGS  = -std=c17 -Wall -Wextra -Werror -g $(SANFLAG) -Isrc -Itests
+CFLAGS  = -std=c17 -Wall -Wextra -Werror -g $(SANFLAG) -Isrc -Itests $(EXTRA_CFLAGS)
 
 SRC_DIR   = src
 TEST_DIR  = tests

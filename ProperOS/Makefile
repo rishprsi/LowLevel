@@ -12,7 +12,7 @@ SANFLAG  = $(if $(strip $(SAN)),-fsanitize=$(SAN),)
 # sigaction, ...) under strict -std=c17 on both Linux and macOS.
 CFLAGS  = -std=c17 -Wall -Wextra -Werror -g -pthread \
           -D_DEFAULT_SOURCE -D_DARWIN_C_SOURCE \
-          $(SANFLAG) -Isrc -Itests
+          $(SANFLAG) -Isrc -Itests $(EXTRA_CFLAGS)
 
 SRC_DIR   = src
 TEST_DIR  = tests

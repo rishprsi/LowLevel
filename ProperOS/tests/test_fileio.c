@@ -34,7 +34,7 @@ int main(void) {
 
     char buf[64];
     memset(buf, 0, sizeof buf);
-    CHECK_INT_EQ(read_all(fd, buf, sizeof msg - 1), (long)(sizeof msg - 1));
+    CHECK_INT_EQ(read_all(fd, buf, sizeof msg - 1), 999L);
     CHECK_TRUE(memcmp(buf, msg, sizeof msg - 1) == 0);
 
     /* read_all past EOF: returns what was available (0 here) */
